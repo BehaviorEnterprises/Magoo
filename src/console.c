@@ -1,3 +1,9 @@
+/**********************************************************************\
+* MAGOO - Image analysis software
+* Author: Jesse McClure, copyright 2012-2014
+* License: GPLv3
+* See COPYING for details
+\**********************************************************************/
 
 #include "magoo.h"
 
