@@ -36,59 +36,8 @@ static Col *col_low, *col_hi;
 static Bool check_crop_area;
 static FILE *out = NULL;
 Command _commands[] = {
-	{ "alpha",     cmd_alpha,     "set/show the alpha level for the original image",
-		NULL },
-	{ "area",      cmd_area,      "calculate the area of the current crop region",
-		NULL },
-	{ "clear",     cmd_clear,     "clear the current crop boundaries",
-		NULL },
-	{ "color",     cmd_color,     "set/show the current highlight color",
-		NULL },
-	{ "count",     cmd_count,     "calculate the area of the current crop region between the thresholds",
-		NULL },
-	{ "echo",      cmd_echo,      "write a string to the output",
-		NULL },
-	{ "exit",      cmd_quit,      "exit",
-		NULL },
-	{ "help",      cmd_help,      "show this help menu",
-		NULL },
-	{ "list",      cmd_list,      "list all open images",
-		NULL },
-	{ "move",      cmd_move,      "move image window",
-		NULL },
-	{ "name",      cmd_name,      "name of the focused image",
-		NULL },
-	{ "quit",      cmd_quit,      NULL,
-		NULL },
-	{ "ratio",     cmd_ratio,     "calculate the ratio of the current crop region",
-		NULL },
-	{ "shell",     cmd_shell,     "display the output of a shell command",
-		NULL },
-	{ "sink",      cmd_sink,      "sink output to file",
-		NULL },
-	{ "threshold", cmd_threshold, "set/show the current threshold",
-		"[spec] val val [val [val val val]]\nDetails coming soon" },
-	{ "zoom",     cmd_zoom,       "zoom/scale image",
-		NULL },
-	{ NULL, NULL, NULL, NULL },
+#include "commands.h"
 };
-
-int cmd_zoom(const char *arg) {
-	GET_FOCUSED_IMG
-	float scale = focused_img->scale;
-	if (!arg) return fprintf(out,"ZOOM: %f\n", scale);
-	else if (arg[0] == 'u' || arg[0] == 'i') scale += 0.1;
-	else if (arg[0] == 'd' || arg[0] == 'o') scale -= 0.1;
-	else scale = atof(arg);
-	if (scale < 0.1) scale = 0.1;
-	else if (scale > 1.0) scale = 1.0;
-	cairo_identity_matrix(focused_img->ctx);
-	cairo_scale(focused_img->ctx, scale, scale);
-	focused_img->scale = scale;
-	XResizeWindow(dpy, focused_img->win, focused_img->w * scale, focused_img->h * scale);
-	img_draw(focused_img);
-	return 0;
-}
 
 int command(const char *s) {
 	if (!out) out = stdout;
@@ -171,7 +120,7 @@ static long _calculate(int (*calc)(cairo_t *, int, int), int (*print)(long)) {
 
 int cmd_alpha(const char *arg) {
 	GET_FOCUSED_IMG
-	if (!arg) fprintf(out, "A-%03d\n", focused_img->source.alpha);
+	if (!arg) fprintf(out, "ALPHA: %03d\n", focused_img->source.alpha);
 	else sscanf(arg, "%hhu", &focused_img->source.alpha);
 	return 0;
 }
@@ -223,7 +172,7 @@ int cmd_help(const char *arg) {
 		if (arg && !strncasecmp(arg, cmd->name, 3)) {
 			if (cmd->detail) fprintf(out, "\n\033[1m%s\033[0m    %s\n",
 					cmd->name, cmd->detail);
-			else fprintf(out, "\n\033[1m%s\033[0m\n%s\n",
+			else fprintf(out, "\n\033[1m%s\033[0m\n\n* %s\n",
 					cmd->name, cmd->help);
 			return 0;
 		}
@@ -330,4 +279,20 @@ int cmd_threshold(const char *arg) {
 	return 0;
 }
 
+int cmd_zoom(const char *arg) {
+	GET_FOCUSED_IMG
+	float scale = focused_img->scale;
+	if (!arg) return fprintf(out,"ZOOM: %f\n", scale);
+	else if (arg[0] == 'u' || arg[0] == 'i') scale += 0.1;
+	else if (arg[0] == 'd' || arg[0] == 'o') scale -= 0.1;
+	else scale = atof(arg);
+	if (scale < 0.1) scale = 0.1;
+	else if (scale > 1.0) scale = 1.0;
+	cairo_identity_matrix(focused_img->ctx);
+	cairo_scale(focused_img->ctx, scale, scale);
+	focused_img->scale = scale;
+	XResizeWindow(dpy, focused_img->win, focused_img->w * scale, focused_img->h * scale);
+	img_draw(focused_img);
+	return 0;
+}
 

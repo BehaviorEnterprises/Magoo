@@ -11,8 +11,8 @@ will be posted here as development progresses.
 
 * Open/Close commands for handling files
 * Track down occasional freeze on shutdown
+	- This hasn't recurred in a while, may have been 'accidentally' fixed
 * Other calculations/analyses (?)
-* Complete help command output
 * Tab completion for parameters (?)
 
 
