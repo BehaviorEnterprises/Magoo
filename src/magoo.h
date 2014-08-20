@@ -42,6 +42,7 @@ struct Img {
 	Window win;
 	cairo_t *ctx;
 	int x, y, w, h;
+	float scale;
 	struct {
 		cairo_surface_t *pix;
 		char *name;

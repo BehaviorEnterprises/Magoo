@@ -142,7 +142,7 @@ void buttonpress(XEvent *ev) {
 		img_draw(img);
 	}
 	else if (e->button == 3) {
-		cairo_line_to(img->ctx, e->x, e->y); // TODO scale as needed
+		cairo_line_to(img->ctx, e->x / img->scale, e->y / img->scale);
 		cairo_set_source_rgba(img->ctx, 1.0, 0.5, 0.5, 1.0);
 		cairo_stroke_preserve(img->ctx);
 	}

@@ -21,12 +21,14 @@ static int cmd_count(const char *);
 static int cmd_echo(const char *);
 static int cmd_help(const char *);
 static int cmd_list(const char *);
+static int cmd_move(const char *);
 static int cmd_name(const char *);
 static int cmd_quit(const char *);
 static int cmd_ratio(const char *);
 static int cmd_shell(const char *);
 static int cmd_sink(const char *);
 static int cmd_threshold(const char *);
+static int cmd_zoom(const char *);
 
 static unsigned char *data_ptr, *dptr;
 static int data_stride;
@@ -52,6 +54,8 @@ Command _commands[] = {
 		NULL },
 	{ "list",      cmd_list,      "list all open images",
 		NULL },
+	{ "move",      cmd_move,      "move image window",
+		NULL },
 	{ "name",      cmd_name,      "name of the focused image",
 		NULL },
 	{ "quit",      cmd_quit,      NULL,
@@ -64,9 +68,27 @@ Command _commands[] = {
 		NULL },
 	{ "threshold", cmd_threshold, "set/show the current threshold",
 		"[spec] val val [val [val val val]]\nDetails coming soon" },
+	{ "zoom",     cmd_zoom,       "zoom/scale image",
+		NULL },
 	{ NULL, NULL, NULL, NULL },
 };
 
+int cmd_zoom(const char *arg) {
+	GET_FOCUSED_IMG
+	float scale = focused_img->scale;
+	if (!arg) return fprintf(out,"ZOOM: %f\n", scale);
+	else if (arg[0] == 'u' || arg[0] == 'i') scale += 0.1;
+	else if (arg[0] == 'd' || arg[0] == 'o') scale -= 0.1;
+	else scale = atof(arg);
+	if (scale < 0.1) scale = 0.1;
+	else if (scale > 1.0) scale = 1.0;
+	cairo_identity_matrix(focused_img->ctx);
+	cairo_scale(focused_img->ctx, scale, scale);
+	focused_img->scale = scale;
+	XResizeWindow(dpy, focused_img->win, focused_img->w * scale, focused_img->h * scale);
+	img_draw(focused_img);
+	return 0;
+}
 
 int command(const char *s) {
 	if (!out) out = stdout;
@@ -222,6 +244,16 @@ int cmd_list(const char *arg) {
 		else
 			fprintf(out, " %d  %s\n", i, img->source.name);
 	}
+}
+
+int cmd_move(const char *arg) {
+	GET_FOCUSED_IMG
+	if (!arg) return fprintf(out,"LOCATION: %d, %d\n", focused_img->x, focused_img->y);
+	focused_img->x = focused_img->y = 0;
+	sscanf(arg,"%d %d", &focused_img->x, &focused_img->y);
+	XMoveWindow(dpy, focused_img->win, focused_img->x, focused_img->y);
+	XFlush(dpy);
+	return 0;
 }
 
 int cmd_name(const char *arg) {
