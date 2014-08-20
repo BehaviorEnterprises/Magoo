@@ -10,7 +10,10 @@ will be posted here as development progresses.
 ##Todo
 
 * Zooming out
+* Open/Close commands for handling files
 * Track down occasional freeze on shutdown
 * Other calculations/analyses (?)
+* Complete help command output
+* Tab completion for parameters (?)
 
 

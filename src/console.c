@@ -10,7 +10,8 @@
 static int process_init();
 static int console_loop();
 
-static const char *prompt = "\n\033[34;1;4mMa\033[0;34;1mg\033[4moo\033[0;34;1m:\033[0m ";
+static const char *_prompt = "\n\033[34;1;4mMa\033[0;34;1mg\033[4moo\033[0;34;1m:\033[0m ";
+static const char *prompt;
 static Bool ready_for_input = False;
 static Bool shutting_down = False;
 
@@ -23,7 +24,7 @@ char *command_completion(const char *text, int state) {
 	return NULL;
 }
 
-char **scope_completion(const char *text, int start, int end) {
+char **magoo_completion(const char *text, int start, int end) {
 	if (start) return NULL;
 	return rl_completion_matches(text, command_completion);
 }
@@ -36,7 +37,7 @@ void sig_handler(int sig) {
 int process_init() {
 	signal(SIGUSR1, &sig_handler);
 	signal(SIGUSR2, &sig_handler);
-	rl_attempted_completion_function = scope_completion;
+	rl_attempted_completion_function = magoo_completion;
 }
 
 int console_loop(int wfd) {
@@ -63,14 +64,25 @@ int console_loop(int wfd) {
 }
 
 int console_init(int argc, const char **argv) {
+	/* check for prompt on command line: */
+	prompt = _prompt;
+	int i;
+	for (i = 0; i < argc - 1; i++) {
+		if (argv[i][0] != '-') continue;
+		if (argv[i][1] == 'p' || (argv[i][1] == '-' && argv[i][2] == 'p'))
+			prompt = argv[i+1];
+	}
+	/* fork a new process for console input: */
 	int fd[2];
 	pipe(fd);
 	if ( (terminal=fork()) == 0) {
 		close(fd[0]);
 		process_init();
 		console_loop(fd[1]);
+fprintf(stderr,"DEBUG INFO: Console loop returned\n");
 		exit(0);
 	}
+	/* return to gui process: */
 	close(fd[1]);
 	input = fd[0];
 	return 0;

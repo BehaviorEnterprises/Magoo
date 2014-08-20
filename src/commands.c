@@ -22,10 +22,10 @@ static int cmd_echo(const char *);
 static int cmd_help(const char *);
 static int cmd_list(const char *);
 static int cmd_name(const char *);
-static int cmd_pipe(const char *);
 static int cmd_quit(const char *);
 static int cmd_ratio(const char *);
 static int cmd_shell(const char *);
+static int cmd_sink(const char *);
 static int cmd_threshold(const char *);
 
 static unsigned char *data_ptr, *dptr;
@@ -54,13 +54,13 @@ Command _commands[] = {
 		NULL },
 	{ "name",      cmd_name,      "name of the focused image",
 		NULL },
-	{ "pipe",      cmd_pipe,      "pipe output to file",
-		NULL },
 	{ "quit",      cmd_quit,      NULL,
 		NULL },
 	{ "ratio",     cmd_ratio,     "calculate the ratio of the current crop region",
 		NULL },
 	{ "shell",     cmd_shell,     "display the output of a shell command",
+		NULL },
+	{ "sink",      cmd_sink,      "sink output to file",
 		NULL },
 	{ "threshold", cmd_threshold, "set/show the current threshold",
 		"[spec] val val [val [val val val]]\nDetails coming soon" },
@@ -68,33 +68,59 @@ Command _commands[] = {
 };
 
 
-int calc_area(cairo_t *ctx, int i, int j) {
+int command(const char *s) {
+	if (!out) out = stdout;
+	if (!s || !strlen(s)) return 1;
+	if (*s == '#') return 0;
+	char *arg = strchr(s,' ');
+	while (arg && arg[0] == ' ') arg++;
+	if (arg && ! arg[0]) arg = NULL;
+	Command *cmd = commands;
+	for (cmd = commands; cmd->name; cmd++)
+		if (!strncasecmp(s, cmd->name, 3))
+			return cmd->func(arg);
+	char *base = strdup(s);
+	arg = strchr(base,' ');
+	if (arg) *arg = '\0';
+	printf("scope: %s: command not found\n", base);
+	free(base);
+	return 1;
+}
+
+int command_init() {
+	commands = _commands;
+	return 0;
+}
+
+
+
+static int _calc_area(cairo_t *ctx, int i, int j) {
 	if (check_crop_area && !cairo_in_clip(ctx, i, j)) return 0;
 	else return 1;
 }
 
-int print_area(long area) {
-	fprintf(out,"AREA: %ld\n", area);
-	return 0;
-}
-
-int calc_count(cairo_t *ctx, int i, int j) {
+static int _calc_count(cairo_t *ctx, int i, int j) {
 	if (check_crop_area && !cairo_in_clip(ctx, i, j)) return 0;
 	dptr = data_ptr + j * data_stride + i;
 	if (*dptr == 255) return 1;
 	return 0;
 }
 
-int print_count(long area) {
+static int _print_area(long area) {
+	fprintf(out,"AREA: %ld\n", area);
+	return 0;
+}
+
+static int _print_count(long area) {
 	fprintf(out,"COUNT: %ld\n", area);
 	return 0;
 }
 
-int print_null(long area) {
+static int _print_null(long area) {
 	return 0;
 }
 
-long calculate(int (*calc)(cairo_t *, int, int), int (*print)(long)) {
+static long _calculate(int (*calc)(cairo_t *, int, int), int (*print)(long)) {
 	GET_FOCUSED_IMG
 	Img *img = focused_img;
 	int i, j;
@@ -119,21 +145,7 @@ long calculate(int (*calc)(cairo_t *, int, int), int (*print)(long)) {
 	return area;
 }
 
-int cmd_area(const char *arg) {
-	calculate(calc_area, print_area);
-}
 
-int cmd_count(const char *arg) {
-	calculate(calc_count, print_count);
-}
-
-int cmd_ratio(const char *arg) {
-	long count, area;
-	count = calculate(calc_count, print_null);
-	area = calculate(calc_area, print_null);
-	fprintf(out, "RATIO: %Lf\n", count / (long double) area);
-	return 0;
-}
 
 int cmd_alpha(const char *arg) {
 	GET_FOCUSED_IMG
@@ -142,11 +154,19 @@ int cmd_alpha(const char *arg) {
 	return 0;
 }
 
+int cmd_area(const char *arg) {
+	_calculate(_calc_area, _print_area);
+}
+
 int cmd_clear(const char *arg) {
 	GET_FOCUSED_IMG
 	cairo_new_path(focused_img->ctx);
 	img_draw(focused_img);
 	return 0;
+}
+
+int cmd_count(const char *arg) {
+	_calculate(_calc_count, _print_count);
 }
 
 int cmd_color(const char *arg) {
@@ -210,19 +230,12 @@ int cmd_name(const char *arg) {
 	return 0;
 }
 
-int cmd_pipe(const char *arg) {
-	if (!arg && out != stdout) {
-		fclose(out);
-		out = stdout;
-		return 0;
-	}
-	FILE *new = fopen(arg, "a");
-	if (!new) {
-		perror("[SCOPE]");
-		out = stdout;
-		return 0;
-	}
-	out = new;
+int cmd_ratio(const char *arg) {
+	long count, area;
+	count = _calculate(_calc_count, _print_null);
+	area = _calculate(_calc_area, _print_null);
+	fprintf(out, "RATIO: %Lf\n", count / (long double) area);
+	return 0;
 }
 
 int cmd_quit(const char *arg) {
@@ -237,6 +250,21 @@ int cmd_shell(const char *arg) {
 		fprintf(out, line);
 	pclose(in);
 	return 0;
+}
+
+int cmd_sink(const char *arg) {
+	if (!arg && out != stdout) {
+		fclose(out);
+		out = stdout;
+		return 0;
+	}
+	FILE *new = fopen(arg, "a");
+	if (!new) {
+		perror("[SCOPE]");
+		out = stdout;
+		return 0;
+	}
+	out = new;
 }
 
 int cmd_threshold(const char *arg) {
@@ -270,27 +298,4 @@ int cmd_threshold(const char *arg) {
 	return 0;
 }
 
-int command(const char *s) {
-	if (!out) out = stdout;
-	if (!s || !strlen(s)) return 1;
-	if (*s == '#') return 0;
-	char *arg = strchr(s,' ');
-	while (arg && arg[0] == ' ') arg++;
-	if (arg && ! arg[0]) arg = NULL;
-	Command *cmd = commands;
-	for (cmd = commands; cmd->name; cmd++)
-		if (!strncasecmp(s, cmd->name, 3))
-			return cmd->func(arg);
-	char *base = strdup(s);
-	arg = strchr(base,' ');
-	if (arg) *arg = '\0';
-	printf("scope: %s: command not found\n", base);
-	free(base);
-	return 1;
-}
-
-int command_init() {
-	commands = _commands;
-	return 0;
-}
 

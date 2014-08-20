@@ -42,7 +42,6 @@ struct Img {
 	Window win;
 	cairo_t *ctx;
 	int x, y, w, h;
-	Bool huge;
 	struct {
 		cairo_surface_t *pix;
 		char *name;
@@ -55,8 +54,16 @@ struct Img {
 	struct {
 		cairo_surface_t *pix;
 		int x, y, w, h;
+		Col line;
 	} crop;
 };
+
+typedef struct Conf {
+	struct { Col low, hi, pseudo; } threshold;
+	Col line;
+	unsigned char alpha;
+	const char *prompt;
+} Conf;
 
 typedef struct Command {
 	const char *name;
@@ -100,6 +107,7 @@ int ww, wh, input, terminal;
 Bool running;
 Img *imgs;
 Img *focused_img;
+Conf conf;
 Command *commands;
 
 #endif /* __SCOPE_H__ */

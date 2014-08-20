@@ -13,12 +13,6 @@ int img_threshold_draw(Img *img) {
 	unsigned char *src, *dest, *sx, *dx;
 	int i, j, src_stride, dest_stride;
 	int i0 = 0, j0 = 0, iN = img->w, jN = img->h;
-if (img->huge) {
-	i0 = (img->x < 0 ? - img->x : 0);
-	j0 = (img->y < 0 ? - img->y : 0);
-	iN = (img->w > i0 + ww ? i0 + ww : img->w);
-	jN = (img->h > j0 + wh ? i0 + wh : img->h);
-}
 	src_stride = cairo_image_surface_get_stride(img->source.pix);
 	dest_stride = cairo_image_surface_get_stride(img->threshold.pix);
 	src = cairo_image_surface_get_data(img->source.pix);
@@ -46,7 +40,6 @@ static int cairo_helper_image_loader(const char *fname, Img *img) {
 	if ( !(gpix=gdk_pixbuf_new_from_file(fname, &gerr)) )
 		die("gpix error\n");
 	gdk_pixbuf_get_file_info(fname, &img->w, &img->h);
-//gdk_pixbuf_new_subpixbuf(gpix, x, y, w, h);
 	img->source.pix = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 		img->w, img->h);
 	cairo_t *ctx = cairo_create(img->source.pix);
@@ -63,14 +56,15 @@ Img *cairo_create_img(const char *fname) {
 	cairo_helper_image_loader(fname, img);
 	img->threshold.pix = cairo_image_surface_create(CAIRO_FORMAT_A8,
 			img->w, img->h);
-img->threshold.low.r = 0;
-img->threshold.low.g = 0;
-img->threshold.low.b = 0;
-img->threshold.hi.r = 120;
-img->threshold.hi.g = 120;
-img->threshold.hi.b = 120;
-img->source.alpha = 120;
-img->huge = False;
+	img->threshold.low.r = conf.threshold.low.r;
+	img->threshold.low.g = conf.threshold.low.g;
+	img->threshold.low.b = conf.threshold.low.b;
+	img->threshold.hi.r = conf.threshold.hi.r;
+	img->threshold.hi.g = conf.threshold.hi.g;
+	img->threshold.hi.b = conf.threshold.hi.b;
+	img->threshold.pseudo = conf.threshold.pseudo;
+	img->crop.line = conf.line;
+	img->source.alpha = conf.alpha;
 	img_threshold_draw(img);
 	const char *name = strrchr(fname, '/');
 	if (name) name++;
@@ -88,8 +82,6 @@ int cairo_init_img(Img *img) {
 	t = cairo_xlib_surface_create(dpy, img->win, vis, img->w, img->h);
 	img->ctx = cairo_create(t);
 	cairo_surface_destroy(t);
-//	calculate = cairo_image_surface_create();
-//	calc_ctx = cairo_create(threshold);
 }
 
 int cairo_destroy_img(Img *img) {
@@ -99,7 +91,6 @@ int cairo_destroy_img(Img *img) {
 
 int cairo_free_img(Img *img) {
 	cairo_surface_destroy(img->threshold.pix);
-//	cairo_surface_destroy(calculate);
 	cairo_destroy(img->ctx);
 	cairo_surface_destroy(img->source.pix);
 	free(img->source.name);
@@ -107,17 +98,6 @@ int cairo_free_img(Img *img) {
 }
 
 int img_draw(Img *img) {
-if (img->huge) {
-cairo_save(img->ctx);
-int i0 = 0, j0 = 0, iN = img->w, jN = img->h;
-i0 = (img->x < 0 ? - img->x : 0);
-j0 = (img->y < 0 ? - img->y : 0);
-iN = (img->w > i0 + ww ? ww: img->w + i0);
-jN = (img->h > j0 + wh ? wh: img->h + j0);
-cairo_rectangle(img->ctx, i0, j0, iN, jN);
-cairo_clip(img->ctx);
-}
-
 	cairo_set_source_rgba(img->ctx, 1, 1, 1, 1);
 	cairo_paint(img->ctx);
 	cairo_set_source_surface(img->ctx, img->source.pix, 0, 0);
@@ -125,17 +105,14 @@ cairo_clip(img->ctx);
 	Col *c = &img->threshold.pseudo;
 	if (c->a) cairo_set_source_rgba(img->ctx, c->r / 255.0, c->g / 255.0,
 			c->b / 255.0, c->a);
-// TODO determine if there is a path:
-double x1, x2, y1, y2;
-cairo_path_extents(img->ctx, &x1, &y1, &x2, &y2);
-if (!(x1 == 0) || !(y1 == 0) || !(x2 == 0) || !(y2 == 0))
-cairo_clip_preserve(img->ctx);
+	double x1, x2, y1, y2;
+	cairo_path_extents(img->ctx, &x1, &y1, &x2, &y2);
+	if (!(x1 == 0) || !(y1 == 0) || !(x2 == 0) || !(y2 == 0))
+	cairo_clip_preserve(img->ctx);
 	cairo_mask_surface(img->ctx, img->threshold.pix, 0, 0);
-cairo_reset_clip(img->ctx);
-cairo_set_source_rgba(img->ctx, 1.0, 0.5, 0.5, 1.0);
-cairo_stroke_preserve(img->ctx);
-
-if (img->huge)
-cairo_restore(img->ctx);
+	cairo_reset_clip(img->ctx);
+	c = &img->crop.line;
+	cairo_set_source_rgba(img->ctx, c->r / 255.0, c->g / 255.0, c->b / 255.0, c->a);
+	cairo_stroke_preserve(img->ctx);
 	return 0;
 }
