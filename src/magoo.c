@@ -22,30 +22,15 @@
 
 #include "magoo.h"
 
-static FILE *log_file;
-static Bool ready_for_input = False;
-
-void die(const char *fmt, ...) {
-	fprintf(stderr,"[SCOPE] ");
-	va_list arg;
-	va_start(arg, fmt);
-	vfprintf(stderr, fmt, arg);
-	va_end(arg);
-	fprintf(stderr,"\n");
-	exit(1);
-}
-
 int main(int argc, const char **argv) {
 	focused_img = NULL;
 	imgs = NULL;
 	command_init();
 	console_init(argc, argv);
-	log_file = stderr;
 	imgs = NULL;
 	xlib_init();
 	config_init(argc, argv);
 	main_loop();
-	// close all files
 	xlib_free();
 	config_free();
 	return 0;

@@ -55,8 +55,6 @@ int console_loop(int wfd) {
 		add_history(cmd);
 		ready_for_input = False;
 		write(wfd, cmd, strlen(cmd)+1);
-//		if (strncasecmp(cmd,"exit",4) == 0) break;
-//		if (strncasecmp(cmd,"quit",4) == 0) break;
 		free(cmd);
 	}
 	free(cmd);
@@ -79,7 +77,6 @@ int console_init(int argc, const char **argv) {
 		close(fd[0]);
 		process_init();
 		console_loop(fd[1]);
-fprintf(stderr,"DEBUG INFO: Console loop returned\n");
 		exit(0);
 	}
 	/* return to gui process: */

@@ -9,8 +9,6 @@ will be posted here as development progresses.
 
 ##Todo
 
-* Track down occasional freeze on shutdown
-	- This hasn't recurred in a while, may have been 'accidentally' fixed
 * Other calculations/analyses (?)
 * Tab completion for parameters (?)
 

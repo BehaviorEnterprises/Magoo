@@ -5,21 +5,14 @@
 * See COPYING for details
 \**********************************************************************/
 
-#ifndef __SCOPE_H__
-#define __SCOPE_H__
+#ifndef __MAGOO_H__
+#define __MAGOO_H__
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <locale.h>
-#include <math.h>
 #include <signal.h>
 #include <readline/readline.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>
@@ -28,11 +21,8 @@
 #include <X11/cursorfont.h>
 #include <gdk/gdk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
-//#include <ft2build.h>
-//#include FT_FREETYPE_H
 #include <cairo.h>
 #include <cairo-xlib.h>
-//#include <cairo-ft.h>
 
 typedef struct Col { unsigned char r, g, b, a; } Col;
 
@@ -108,5 +98,5 @@ Img *imgs, *focused_img;
 Conf conf;
 Command *commands;
 
-#endif /* __SCOPE_H__ */
+#endif /* __MAGOO_H__ */
 
