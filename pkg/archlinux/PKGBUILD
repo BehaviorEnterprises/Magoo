@@ -1,0 +1,28 @@
+# Maintainer: Jesse McClure AKA "Tribly" <jmcclure [at] cns [dot] umass [dot] edu>
+_gitname="magoo"
+pkgname=${_gitname}-git
+pkgver=0
+pkgrel=1
+pkgdesc="Image analysis for quantifying area/density of color-thresholded images"
+arch=('x86_64' 'i686')
+url="https://BehaviorEnterprises.com"
+license=('GPL3')
+depends=('cairo' 'gtk2')
+makedepends=('git')
+source=("${_gitname}::git://github.com/BehaviorEnterprises/Magoo.git")
+sha256sums=('SKIP')
+
+pkgver() {
+	cd "${srcdir}/${_gitname}"
+	echo 0.$(git rev-list --count HEAD).$(git describe --always )
+}
+
+build() {
+	cd "${srcdir}/${_gitname}"
+	make
+}
+
+package() {
+	cd "${srcdir}/${_gitname}"
+	make DESTDIR="${pkgdir}" PREFIX=/usr install
+}
