@@ -15,7 +15,8 @@ ${PROG}: ${MODULES:%=%.o}
 
 %.o: %.c ${HEADERS}
 
-#install: ${PROG}
+install: ${PROG}
+	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
 
 clean:
 	@rm -f ${PROG}-${VER}.tar.gz ${MODULES:%=%.o}
