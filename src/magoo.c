@@ -35,24 +35,17 @@ void die(const char *fmt, ...) {
 	exit(1);
 }
 
-void log_entry(const char *fmt, ...) {
-	fprintf(log_file,"[SCOPE] ");
-	va_list arg;
-	va_start(arg, fmt);
-	vfprintf(log_file, fmt, arg);
-	va_end(arg);
-	fprintf(log_file,"\n");
-}
-
 int main(int argc, const char **argv) {
+	focused_img = NULL;
+	imgs = NULL;
 	command_init();
 	console_init(argc, argv);
 	log_file = stderr;
 	imgs = NULL;
-	config_init(argc, argv);
 	xlib_init();
-	focused_img = imgs;
+	config_init(argc, argv);
 	main_loop();
+	// close all files
 	xlib_free();
 	config_free();
 	return 0;

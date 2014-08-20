@@ -37,8 +37,10 @@ int img_threshold_draw(Img *img) {
 static int cairo_helper_image_loader(const char *fname, Img *img) {
 	GdkPixbuf *gpix;
 	GError *gerr = NULL;
-	if ( !(gpix=gdk_pixbuf_new_from_file(fname, &gerr)) )
-		die("gpix error\n");
+	if ( !(gpix=gdk_pixbuf_new_from_file(fname, &gerr)) ) {
+		fprintf(stderr,"GDK Pixbuf Error\n");
+		return 1;
+	}
 	gdk_pixbuf_get_file_info(fname, &img->w, &img->h);
 	img->source.pix = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 		img->w, img->h);
@@ -50,10 +52,13 @@ static int cairo_helper_image_loader(const char *fname, Img *img) {
 	return 0;
 }
 
-Img *cairo_create_img(const char *fname) {
+Img *cairo_image_init(const char *fname) {
 	Img *img;
 	img = calloc(1, sizeof(Img));
-	cairo_helper_image_loader(fname, img);
+	if (cairo_helper_image_loader(fname, img) != 0) {
+		free(img);
+		return NULL;
+	}
 	img->threshold.pix = cairo_image_surface_create(CAIRO_FORMAT_A8,
 			img->w, img->h);
 	img->threshold.low.r = conf.threshold.low.r;
@@ -73,28 +78,21 @@ Img *cairo_create_img(const char *fname) {
 	img->source.name = strdup(name);
 	char *dot = strrchr(img->source.name, '.');
 	if (dot) *dot = '\0';
-	img->next = imgs;
-	imgs = img;
-	return img;
-}
-
-int cairo_init_img(Img *img) {
+	xlib_image_init(img);
 	cairo_surface_t *t;
 	t = cairo_xlib_surface_create(dpy, img->win, vis, img->w, img->h);
 	img->ctx = cairo_create(t);
 	cairo_surface_destroy(t);
+	return img;
 }
 
-int cairo_destroy_img(Img *img) {
-	free(img);
-	return 0;
-}
-
-int cairo_free_img(Img *img) {
+int cairo_image_free(Img *img) {
 	cairo_surface_destroy(img->threshold.pix);
 	cairo_destroy(img->ctx);
 	cairo_surface_destroy(img->source.pix);
 	free(img->source.name);
+	xlib_image_free(img);
+	free(img);
 	return 0;
 }
 

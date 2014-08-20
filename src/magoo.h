@@ -74,10 +74,8 @@ typedef struct Command {
 } Command;
 
 /* cairo.c */
-Img *cairo_create_img(const char *);
-int cairo_destroy_img(Img *);
-int cairo_free_img(Img *);
-int cairo_init_img(Img *);
+Img *cairo_image_init(const char *);
+int cairo_image_free();
 int img_draw(Img *);
 
 /* commands.c */
@@ -91,7 +89,7 @@ int console_init(int, const char **);
 int config_init();
 int config_free();
 
-/* scope.c */
+/* magoo.c */
 void die(const char *, ...);
 
 /* xlib.c */
@@ -106,8 +104,7 @@ Visual *vis;
 GC gc;
 int ww, wh, input, terminal;
 Bool running;
-Img *imgs;
-Img *focused_img;
+Img *imgs, *focused_img;
 Conf conf;
 Command *commands;
 

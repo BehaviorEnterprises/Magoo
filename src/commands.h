@@ -12,6 +12,9 @@
 { "clear",     cmd_clear,     "clear the current crop boundaries",
 	NULL },
 
+{ "close",     cmd_close,     "close the current image",
+	NULL },
+
 { "color",     cmd_color,     "set/show the current highlight color",
 	"[val val val [val]]\n\n"
 	"* Set or show the color used to highlight points within the threshold criteria\n"
@@ -54,6 +57,10 @@
 	"* If \033[3mstring\033[0m is provided, the current image name will be set\n"
 	"* Setting the image name currently serves no purpose\n"
 	"* The default name is the basename of the file without the extension" },
+
+{ "open",      cmd_open,      "open a new image",
+	"[filename]\n\n"
+	"* Open \033[3mfilename\033[0m as a new image buffer"},
 
 { "quit",      cmd_quit,      NULL,
 	NULL },

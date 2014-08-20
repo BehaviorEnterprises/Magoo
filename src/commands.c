@@ -9,13 +9,14 @@
 
 #define GET_FOCUSED_IMG\
 	if (!focused_img) {\
-		fprintf(stderr, "threshold: no image focused\n");\
+		fprintf(stderr, "no image focused\n");\
 		return 1;\
 	}
 
 static int cmd_alpha(const char *);
 static int cmd_area(const char *);
 static int cmd_clear(const char *);
+static int cmd_close(const char *);
 static int cmd_color(const char *);
 static int cmd_count(const char *);
 static int cmd_echo(const char *);
@@ -23,6 +24,7 @@ static int cmd_help(const char *);
 static int cmd_list(const char *);
 static int cmd_move(const char *);
 static int cmd_name(const char *);
+static int cmd_open(const char *);
 static int cmd_quit(const char *);
 static int cmd_ratio(const char *);
 static int cmd_shell(const char *);
@@ -53,13 +55,38 @@ int command(const char *s) {
 	char *base = strdup(s);
 	arg = strchr(base,' ');
 	if (arg) *arg = '\0';
-	printf("scope: %s: command not found\n", base);
+	printf("magoo: %s: command not found\n", base);
 	free(base);
 	return 1;
 }
 
 int command_init() {
 	commands = _commands;
+	return 0;
+}
+
+int image_load(const char *fname) {
+	char *clean = strdup(fname);
+	char *end = clean + strlen(clean) - 1;
+	while (end > clean && isspace(*end)) end--;
+	*(end+1) = '\0';
+	Img *img = cairo_image_init(clean);
+	free(clean);
+	if (!img) return 1;
+	img->next = imgs;
+	imgs = img;
+	focused_img = img;
+	return 0;
+}
+
+int image_unload(Img *img) {
+	Img *pre;
+	for (pre = imgs; pre && pre->next != img; pre = pre->next);
+	if (pre) pre->next = img->next;
+	else imgs = img->next;
+	focused_img = img->next;
+	if (!focused_img) focused_img = imgs;
+	cairo_image_free(img);
 	return 0;
 }
 
@@ -136,8 +163,15 @@ int cmd_clear(const char *arg) {
 	return 0;
 }
 
+int cmd_close(const char *arg) {
+	GET_FOCUSED_IMG
+	image_unload(focused_img);
+	return 0;
+}
+
 int cmd_count(const char *arg) {
 	_calculate(_calc_count, _print_count);
+	return 0;
 }
 
 int cmd_color(const char *arg) {
@@ -211,6 +245,16 @@ int cmd_name(const char *arg) {
 	return 0;
 }
 
+int cmd_open(const char *arg) {
+	if (image_load(arg) != 0) {
+		fprintf(out, "ERROR: Failed to open \"%s\"\n", arg);
+		return 1;
+	}
+	XMapWindow(dpy, focused_img->win);
+	XFlush(dpy);
+	return 0;
+}
+
 int cmd_ratio(const char *arg) {
 	long count, area;
 	count = _calculate(_calc_count, _print_null);
@@ -241,7 +285,7 @@ int cmd_sink(const char *arg) {
 	}
 	FILE *new = fopen(arg, "a");
 	if (!new) {
-		perror("[SCOPE]");
+		perror("[MAGOO]");
 		out = stdout;
 		return 0;
 	}

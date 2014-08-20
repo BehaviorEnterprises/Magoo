@@ -21,6 +21,12 @@ static void (*handler[LASTEvent])(XEvent *) = {
 };
 
 int main_loop() {
+	/* map all windows: */
+	XMapWindow(dpy, win);
+	Img *img;
+	for (img = imgs; img; img = img->next) XMapWindow(dpy, img->win);
+	XFlush(dpy);
+	/* set up loop: */
 	running = True;
 	XEvent ev;
 	fd_set fds;
@@ -28,6 +34,7 @@ int main_loop() {
 	int max = (xfd > input ? xfd + 1 : input + 1);
 	char cmd[256];
 	kill(terminal, SIGUSR1);
+	/* loop: */
 	while (running) {
 		FD_ZERO(&fds);
 		FD_SET(xfd, &fds);
@@ -50,26 +57,27 @@ int main_loop() {
 	return 0;
 }
 
-static int xlib_create_img(Img *img) {
+int xlib_image_init(Img *img) {
 	XSetWindowAttributes wa;
 	wa.event_mask = ExposureMask | KeyPressMask | ButtonPressMask;
 	wa.backing_store = Always;
 	img->win = XCreateWindow(dpy, win, img->x, img->y, img->w, img->h, 1, dep,
 			InputOutput, vis, CWEventMask | CWBackingStore, &wa);
-	if (img->win) return cairo_init_img(img);
-	else return 1;
+	return 0;
 }
 
-static int xlib_destroy_img(Img *img) {
-	cairo_free_img(img);
+int xlib_image_free(Img *img) {
 	XDestroyWindow(dpy, img->win);
-	cairo_destroy_img(img);
+	XFlush(dpy);
 	return 0;
 }
 
 int xlib_init() {
 	/* connect to display and get defaults */
-	if (!(dpy=XOpenDisplay(0x0))) die("Failed to open display");
+	if (!(dpy=XOpenDisplay(0x0))) {
+		fprintf(stderr, "Failed to open display");
+		exit(1);
+	}
 	scr = DefaultScreen(dpy);
 	dep = DefaultDepth(dpy, scr);
 	vis = DefaultVisual(dpy, scr);
@@ -87,24 +95,14 @@ int xlib_init() {
 	wa.background_pixmap = pix;
 	win = XCreateWindow(dpy, root, 0, 0, ww=640, wh=480, 0, dep,
 			InputOutput, vis, CWEventMask | CWBackPixmap, &wa);
-	XStoreName(dpy, win, "Scope");
+	XStoreName(dpy, win, "Magoo");
 	// TODO create cursors : crosshair ...
-	XMapWindow(dpy, win);
-	Img *img;
-	for (img = imgs; img; img = img->next) {
-		xlib_create_img(img);
-		XMapWindow(dpy, img->win);
-	}
 	XFlush(dpy);
 	return 0;
 }
 
 int xlib_free() {
-	Img *img;
-	while ( (img=imgs) ) {
-		imgs = img->next;
-		xlib_destroy_img(img);
-	}
+	while (imgs) image_unload(imgs);
 	XDestroyWindow(dpy, win);
 	XFlush(dpy);
 	XCloseDisplay(dpy);
@@ -117,9 +115,6 @@ void buttonpress(XEvent *ev) {
 	for (img = imgs; img; img = img->next)
 		if (e->window == img->win) break;
 	if (!img) return;
-	//int del = 8;
-	//if (e->state == ShiftMask) del = 16;
-	//else if (e->state == ControlMask) del = 4;
 	if (e->button == 1) {
 		XRaiseWindow(dpy, img->win);
 		XGrabPointer(dpy, root, True, PointerMotionMask | ButtonReleaseMask,

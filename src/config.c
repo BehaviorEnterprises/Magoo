@@ -71,7 +71,7 @@ int config_init(int argc, const char **argv) {
 							(arg = *(--argp)));
 			}
 		}
-		else cairo_create_img(arg);
+		else image_load(arg);
 	}
 	return 0;
 }
