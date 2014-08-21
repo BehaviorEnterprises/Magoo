@@ -9,6 +9,7 @@ url="https://BehaviorEnterprises.com"
 license=('GPL3')
 depends=('cairo' 'gtk2')
 makedepends=('git')
+install="${_gitname}.install"
 source=("${_gitname}::git://github.com/BehaviorEnterprises/Magoo.git")
 sha256sums=('SKIP')
 

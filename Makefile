@@ -17,6 +17,8 @@ ${PROG}: ${MODULES:%=%.o}
 
 install: ${PROG}
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
+	@install -Dm644 share/${PROG}.png ${DESTDIR}${PREFIX}/share/pixmaps/${PROG}.png
+	@install -Dm644 share/${PROG}.desktop ${DESTDIR}${PREFIX}/share/applications/${PROG}.desktop
 
 clean:
 	@rm -f ${PROG}-${VER}.tar.gz ${MODULES:%=%.o}

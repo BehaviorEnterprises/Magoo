@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Magoo
+Comment=Image analysis for quantifying area/density of color-thresholded
+images
+Exec=fex-gtk %F
+Terminal=true
+Type=Application
+Categories=Science;
+Icon=/usr/share/pixmaps/magoo.png
+MimeType=image/*

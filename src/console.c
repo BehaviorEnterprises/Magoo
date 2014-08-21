@@ -25,7 +25,18 @@ char *command_completion(const char *text, int state) {
 }
 
 char **magoo_completion(const char *text, int start, int end) {
-	if (start) return NULL;
+	if (start) {
+		if (strncasecmp(rl_line_buffer,"open", 4) == 0)
+			return NULL;
+		if (strncasecmp(rl_line_buffer,"sink", 4) == 0)
+			return NULL;
+		if (strncasecmp(rl_line_buffer,"shell", 5) == 0)
+			return NULL;
+		rl_attempted_completion_over = 1;
+		if (strncasecmp(rl_line_buffer,"help", 4) == 0)
+			return rl_completion_matches(text, command_completion);
+		return NULL;
+	}
 	return rl_completion_matches(text, command_completion);
 }
 
@@ -43,6 +54,8 @@ int process_init() {
 int console_loop(int wfd) {
 	char *cmd = NULL;
 	int status;
+	fprintf(stdout,"\033]0;Magoo: Console\007");
+	system("clear");
 	for (;;) {
 		while (!ready_for_input) sleep(1);
 		if (shutting_down) return 0;

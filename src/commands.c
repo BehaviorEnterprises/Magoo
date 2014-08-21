@@ -160,6 +160,7 @@ int cmd_clear(const char *arg) {
 	GET_FOCUSED_IMG
 	cairo_new_path(focused_img->ctx);
 	img_draw(focused_img);
+	XFlush(dpy);
 	return 0;
 }
 

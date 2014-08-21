@@ -95,7 +95,7 @@ int xlib_init() {
 	wa.background_pixmap = pix;
 	win = XCreateWindow(dpy, root, 0, 0, ww=640, wh=480, 0, dep,
 			InputOutput, vis, CWEventMask | CWBackPixmap, &wa);
-	XStoreName(dpy, win, "Magoo");
+	XStoreName(dpy, win, "Magoo: Images");
 	// TODO create cursors : crosshair ...
 	XFlush(dpy);
 	return 0;
@@ -117,6 +117,7 @@ void buttonpress(XEvent *ev) {
 	if (!img) return;
 	if (e->button == 1) {
 		XRaiseWindow(dpy, img->win);
+		focused_img = img;
 		XGrabPointer(dpy, root, True, PointerMotionMask | ButtonReleaseMask,
 				GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
 		int xx = e->x_root, yy = e->y_root, dx, dy;
