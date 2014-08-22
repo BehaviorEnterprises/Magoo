@@ -2,7 +2,7 @@
 Name=Magoo
 Comment=Image analysis for quantifying area/density of color-thresholded
 images
-Exec=fex-gtk %F
+Exec=magoo %F
 Terminal=true
 Type=Application
 Categories=Science;
