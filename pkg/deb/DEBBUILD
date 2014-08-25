@@ -1,0 +1,29 @@
+maintainer="jessse@behaviorenterprises.com"
+pkgname="magoo"
+pkgver="0.0"
+pkgrel=1
+pkgdesc='Image analysis and density quantification'
+url='http://behaviorenterprises.com/software.html?package=magoo'
+license='GPL3'
+arch="$(dpkg --print-architecture)"
+depends=('desktop-file-utils' 'libcairo2')
+makedepends=('build-essential' 'dpkg-dev' 'checkinstall' 'git'
+	'libcairo2-dev' 'libx11-dev')
+source=("git://github.com/BehaviorEnterprises/magoo.git")
+sha256sums=('SKIP')
+
+prepare() {
+	cd "${pkgname}"
+	pkgver="0.$(git rev-list --count HEAD).$(git describe --always)"
+}
+
+build() {
+	cd "${pkgname}"
+	make
+}
+
+post_install() {
+	update-desktop-database -q
+}
+
+# vim: ft=sh

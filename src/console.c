@@ -15,6 +15,7 @@ static const char *prompt;
 static Bool ready_for_input = False;
 static Bool shutting_down = False;
 
+
 char *command_completion(const char *text, int state) {
 	static int i, len;
 	if (!state) { i = -1; len = strlen(text); }

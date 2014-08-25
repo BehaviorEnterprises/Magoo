@@ -84,6 +84,7 @@ void die(const char *, ...);
 
 /* xlib.c */
 int main_loop();
+int xlib_dock(int);
 int xlib_init();
 int xlib_free();
 

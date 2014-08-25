@@ -6,15 +6,20 @@
 \**********************************************************************/
 
 #include "magoo.h"
+#include "math.h"
 
 static void buttonpress(XEvent *);
+static void clientmessage(XEvent *);
 static void expose(XEvent *);
 static void keypress(XEvent *);
 static void propertynotify(XEvent *);
 
+static Atom dnd;
+
 static Window root, win;
 static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]     = buttonpress,
+	[ClientMessage]	= clientmessage,
 	[Expose]          = expose,
 	[KeyPress]        = keypress,
 	[PropertyNotify]  = propertynotify,
@@ -78,6 +83,7 @@ int xlib_init() {
 		fprintf(stderr, "Failed to open display");
 		exit(1);
 	}
+dnd = XInternAtom(dpy, "XdndAware", False);
 	scr = DefaultScreen(dpy);
 	dep = DefaultDepth(dpy, scr);
 	vis = DefaultVisual(dpy, scr);
@@ -96,6 +102,9 @@ int xlib_init() {
 	win = XCreateWindow(dpy, root, 0, 0, ww=640, wh=480, 0, dep,
 			InputOutput, vis, CWEventMask | CWBackPixmap, &wa);
 	XStoreName(dpy, win, "Magoo: Images");
+Atom atom = XInternAtom(dpy, "ATOM", False);
+Atom fname = XInternAtom(dpy, "FILENAME", False);
+XChangeProperty(dpy, win, dnd, atom, 32, PropModeReplace, (unsigned char *)&fname, 1);
 	// TODO create cursors : crosshair ...
 	XFlush(dpy);
 	return 0;
@@ -104,12 +113,13 @@ int xlib_init() {
 int xlib_free() {
 	while (imgs) image_unload(imgs);
 	XDestroyWindow(dpy, win);
-	XFlush(dpy);
+	XSync(dpy,True);
 	XCloseDisplay(dpy);
 	return 0;
 }
 
 void buttonpress(XEvent *ev) {
+	static Bool path_open = False;
 	XButtonEvent *e = &ev->xbutton;
 	Img *img;
 	for (img = imgs; img; img = img->next)
@@ -136,12 +146,21 @@ void buttonpress(XEvent *ev) {
 		cairo_close_path(img->ctx);
 		cairo_new_sub_path(img->ctx);
 		img_draw(img);
+		path_open = False;
 	}
 	else if (e->button == 3) {
+		if (!path_open) cairo_arc(img->ctx, e->x, e->y, 1, 0, 2*M_PI);
 		cairo_line_to(img->ctx, e->x / img->scale, e->y / img->scale);
-		cairo_set_source_rgba(img->ctx, 1.0, 0.5, 0.5, 1.0);
+		Col *c = &img->crop.line;
+		cairo_set_source_rgba(img->ctx, c->r/255.0, c->g/255.0, c->b/255.0, c->a);
 		cairo_stroke_preserve(img->ctx);
+		XFlush(dpy);
+		path_open = True;
 	}
+}
+
+void clientmessage(XEvent *ev) {
+	fprintf(stderr, "Client Message\n");
 }
 
 void expose(XEvent *ev) {

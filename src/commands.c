@@ -91,6 +91,9 @@ int image_unload(Img *img) {
 }
 
 
+/****************************\
+|* Local "helper" functions
+\****************************/
 
 static int _calc_area(cairo_t *ctx, int i, int j) {
 	if (check_crop_area && !cairo_in_clip(ctx, i, j)) return 0;
@@ -144,6 +147,9 @@ static long _calculate(int (*calc)(cairo_t *, int, int), int (*print)(long)) {
 }
 
 
+/****************************\
+|* Command functions
+\****************************/
 
 int cmd_alpha(const char *arg) {
 	GET_FOCUSED_IMG
@@ -247,6 +253,7 @@ int cmd_name(const char *arg) {
 }
 
 int cmd_open(const char *arg) {
+	if (!arg) return 1;
 	if (image_load(arg) != 0) {
 		fprintf(out, "ERROR: Failed to open \"%s\"\n", arg);
 		return 1;
@@ -335,6 +342,7 @@ int cmd_zoom(const char *arg) {
 	else if (scale > 1.0) scale = 1.0;
 	cairo_identity_matrix(focused_img->ctx);
 	cairo_scale(focused_img->ctx, scale, scale);
+	cairo_set_line_width(focused_img->ctx, 1.25 / scale);
 	focused_img->scale = scale;
 	XResizeWindow(dpy, focused_img->win, focused_img->w * scale, focused_img->h * scale);
 	img_draw(focused_img);

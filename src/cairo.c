@@ -99,8 +99,6 @@ int cairo_image_free(Img *img) {
 int img_draw(Img *img) {
 	cairo_set_source_rgba(img->ctx, 1, 1, 1, 1);
 	cairo_paint(img->ctx);
-	//cairo_save(img->ctx);
-	//cairo_scale(img->ctx,img->scale,img->scale);
 	cairo_set_source_surface(img->ctx, img->source.pix, 0, 0);
 	cairo_paint_with_alpha(img->ctx, img->source.alpha / 255.0);
 	Col *c = &img->threshold.pseudo;
@@ -115,6 +113,5 @@ int img_draw(Img *img) {
 	c = &img->crop.line;
 	cairo_set_source_rgba(img->ctx, c->r / 255.0, c->g / 255.0, c->b / 255.0, c->a);
 	cairo_stroke_preserve(img->ctx);
-	//cairo_restore(img->ctx);
 	return 0;
 }

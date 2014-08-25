@@ -9,6 +9,7 @@ will be posted here as development progresses.
 
 ##Todo
 
+* Occasional X freeze on shutdown
 * Other calculations/analyses (?)
 * Tab completion for parameters (?)
 
