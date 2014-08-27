@@ -9,6 +9,7 @@
 
 static int process_init();
 static int console_loop();
+static int help_version(char);
 
 static const char *_prompt = "\n\033[34;1;4mMa\033[0;34;1mg\033[4moo\033[0;34;1m:\033[0m ";
 static const char *prompt;
@@ -79,10 +80,16 @@ int console_init(int argc, const char **argv) {
 	/* check for prompt on command line: */
 	prompt = _prompt;
 	int i;
-	for (i = 0; i < argc - 1; i++) {
-		if (argv[i][0] != '-') continue;
-		if (argv[i][1] == 'p' || (argv[i][1] == '-' && argv[i][2] == 'p'))
-			prompt = argv[i+1];
+	const char *c;
+	for (i = 0; i < argc; i++) {
+		if ((c = argv[i])[0] != '-') continue;
+		if ( *(++c) == '-') ++c;
+		switch (*c) {
+			case 'p': prompt = argv[i+1]; //break;
+			case 'h': case 'v': help_version(*c); break;
+			case 'a': case 'c': case 'l': case 't': break;
+			default: break;//TODO error
+		}
 	}
 	/* fork a new process for console input: */
 	int fd[2];
@@ -96,6 +103,14 @@ int console_init(int argc, const char **argv) {
 	/* return to gui process: */
 	close(fd[1]);
 	input = fd[0];
+	return 0;
+}
+
+int help_version(char c) {
+	printf(VERSION_STRING);
+	if (c == 'v') exit(0);
+	printf("\nSee `man magoo` for usage details or use the `help` command in an interactive session\n");
+	exit(0);
 	return 0;
 }
 

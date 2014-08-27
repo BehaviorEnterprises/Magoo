@@ -207,8 +207,19 @@ int cmd_echo(const char *arg) {
 
 int cmd_help(const char *arg) {
 	Command *cmd = commands;
-	// TODO
-	if (!arg) fprintf(out,"\n\033[1mCOMMANDS\033[0m\n");
+	if (!arg) {
+		fprintf(out,
+"\n" VERSION_STRING
+"\n\033[1mIMAGE WINDOW\033[0m\n"
+"  \033[1mMouse Left Button\033[0m\n"
+"    Drag to raise / move an image\n"
+"  \033[1mMouse Right Button\033[0m\n"
+"    Click to add points for a region selection\n"
+"  \033[1mMouse Middle Button\033[0m\n"
+"    Close a current region selection\n"
+"\n\033[1mCOMMAND WINDOW\033[0m\n"
+		);
+	}
 	for (cmd = commands; cmd->name; cmd++) {
 		if (arg && !strncasecmp(arg, cmd->name, 3)) {
 			if (cmd->detail) fprintf(out, "\n\033[1m%s\033[0m    %s\n",
@@ -221,7 +232,9 @@ int cmd_help(const char *arg) {
 			fprintf(out, "  \033[1m%s\033[0m\n    %s\n", cmd->name, cmd->help);
 		}
 	}
-	// TODO
+	if (!arg) {
+		fprintf(out,"\nUse \"help <command>\" for details on any command\n");
+	}
 }
 
 int cmd_list(const char *arg) {

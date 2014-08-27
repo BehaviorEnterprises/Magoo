@@ -34,7 +34,7 @@
 { "exit",      cmd_quit,      "exit",
 	NULL },
 
-{ "help",      cmd_help,      "show this help menu",
+{ "help",      cmd_help,      "show this help menu or learn about commands",
 	"[command]\n\n"
 	"* If \033[3mcommand\033[0m is specified, detailed help will be shown for that command\n"
 	"* Without a \033[3mcommand\033[0m parameter, show the main help menu" },

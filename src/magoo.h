@@ -24,6 +24,15 @@
 #include <cairo.h>
 #include <cairo-xlib.h>
 
+#define STRING(s)		STRINGIFY(s)
+#define STRINGIFY(s)	#s
+
+#define VERSION_STRING	\
+STRING(PROGRAM_NAME) " v" STRING(PROGRAM_VER) "\n" \
+"Copyright (C) 2014 Behavior Enterprises <http://behaviorenterprises.com>\n" \
+"License GPL3: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>\n" \
+"Written by Jesse McClure\n"
+
 typedef struct Col { unsigned char r, g, b, a; } Col;
 
 typedef struct Img Img;
