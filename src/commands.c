@@ -21,6 +21,7 @@ static int cmd_color(const char *);
 static int cmd_count(const char *);
 static int cmd_echo(const char *);
 static int cmd_help(const char *);
+static int cmd_info(const char *);
 static int cmd_list(const char *);
 static int cmd_move(const char *);
 static int cmd_name(const char *);
@@ -66,7 +67,9 @@ int command_init() {
 }
 
 int image_load(const char *fname) {
-	char *clean = strdup(fname);
+	char *clean;
+	if (strncmp(fname, "file://", 7) == 0) clean = strdup(fname + 7);
+	else clean = strdup(fname);
 	char *end = clean + strlen(clean) - 1;
 	while (end > clean && isspace(*end)) end--;
 	*(end+1) = '\0';
@@ -76,6 +79,8 @@ int image_load(const char *fname) {
 	img->next = imgs;
 	imgs = img;
 	focused_img = img;
+	XMapWindow(dpy, focused_img->win);
+	XFlush(dpy);
 	return 0;
 }
 
@@ -107,6 +112,7 @@ static int _calc_count(cairo_t *ctx, int i, int j) {
 	return 0;
 }
 
+
 static int _print_area(long area) {
 	fprintf(out,"AREA: %ld\n", area);
 	return 0;
@@ -115,6 +121,9 @@ static int _print_area(long area) {
 static int _print_count(long area) {
 	fprintf(out,"COUNT: %ld\n", area);
 	return 0;
+}
+
+static int _print_info(long ignore) {
 }
 
 static int _print_null(long area) {
@@ -237,6 +246,47 @@ int cmd_help(const char *arg) {
 	}
 }
 
+int cmd_info(const char *arg) {
+	GET_FOCUSED_IMG
+	Img *img = focused_img;
+	int i,j;
+	double x1, x2, y1, y2;
+	unsigned char *source_ptr, *sptr;
+	int source_stride;
+	Bool check;
+	Col low, hi;
+	unsigned long long nR = 0L, nG = 0L, nB = 0L;
+	int n = 0;
+	cairo_clip_preserve(img->ctx);
+	cairo_clip_extents(img->ctx, &x1, &y1, &x2, &y2);
+	cairo_surface_flush(img->source.pix);
+	source_stride = cairo_image_surface_get_stride(img->source.pix);
+	source_ptr = cairo_image_surface_get_data(img->source.pix);
+	low = (Col) {255, 255, 255};
+	hi = (Col) {0, 0, 0};
+	if (x1 == 0 && y1 == 0 && x2 == 0 && y2 == 0) check = False;
+	else check = True;
+	for (i = 0; i < img->w; i++) {
+		for (j = 0; j < img->h; j++) {
+			if (check && !cairo_in_clip(img->ctx, i, j)) continue;
+			sptr = source_ptr + j * source_stride + i * 4;
+			if (low.b > sptr[0]) low.b = sptr[0];
+			if (low.g > sptr[1]) low.g = sptr[1];
+			if (low.r > sptr[2]) low.r = sptr[2];
+			if (hi.b < sptr[0]) hi.b = sptr[0];
+			if (hi.g < sptr[1]) hi.g = sptr[1];
+			if (hi.r < sptr[2]) hi.r = sptr[2];
+			nB += sptr[0];
+			nG += sptr[1];
+			nR += sptr[2];
+			n += 1;
+		}
+	}
+	fprintf(out, "     R   G   B \nLO: %03d %03d %03d\nHI: %03d %03d %03d\n"
+			"AVG %03d %03d %03d\n", low.r, low.g, low.b, hi.r, hi.g, hi.b,
+			(int) (nR / (float) n), (int) (nG / (float) n), (int) (nB / (float) n));
+}
+
 int cmd_list(const char *arg) {
 	Img *img;
 	int i = 0;
@@ -271,8 +321,6 @@ int cmd_open(const char *arg) {
 		fprintf(out, "ERROR: Failed to open \"%s\"\n", arg);
 		return 1;
 	}
-	XMapWindow(dpy, focused_img->win);
-	XFlush(dpy);
 	return 0;
 }
 
@@ -359,6 +407,7 @@ int cmd_zoom(const char *arg) {
 	focused_img->scale = scale;
 	XResizeWindow(dpy, focused_img->win, focused_img->w * scale, focused_img->h * scale);
 	img_draw(focused_img);
+	XFlush(dpy);
 	return 0;
 }
 

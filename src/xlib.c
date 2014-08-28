@@ -13,8 +13,18 @@ static void clientmessage(XEvent *);
 static void expose(XEvent *);
 static void keypress(XEvent *);
 static void propertynotify(XEvent *);
+static void selectionnotify(XEvent *);
 
-static Atom dnd;
+enum atom_type {
+	FileType, FileName,
+	XdndAware, XdndSelection, XdndTypeList,
+	XdndActionCopy,
+	XdndEnter, XdndLeave, XdndDrop, XdndFinished,
+	XdndPosition, XdndStatus,
+	LASTAtom
+};
+
+static Atom atoms[LASTAtom];
 
 static Window root, win;
 static void (*handler[LASTEvent])(XEvent *) = {
@@ -23,6 +33,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
 	[Expose]          = expose,
 	[KeyPress]        = keypress,
 	[PropertyNotify]  = propertynotify,
+	[SelectionNotify] = selectionnotify,
 };
 
 int main_loop() {
@@ -83,12 +94,23 @@ int xlib_init() {
 		fprintf(stderr, "Failed to open display");
 		exit(1);
 	}
-dnd = XInternAtom(dpy, "XdndAware", False);
 	scr = DefaultScreen(dpy);
 	dep = DefaultDepth(dpy, scr);
 	vis = DefaultVisual(dpy, scr);
 	gc = DefaultGC(dpy, scr);
 	root = RootWindow(dpy, scr);
+atoms[FileType] = XInternAtom(dpy, "text/uri-list", False);
+atoms[FileName] = XInternAtom(dpy, "MagooFileName", False);
+atoms[XdndAware] = XInternAtom(dpy, "XdndAware", False);
+atoms[XdndSelection] = XInternAtom(dpy, "XdndSelection", False);
+atoms[XdndEnter] = XInternAtom(dpy, "XdndEnter", False);
+atoms[XdndTypeList] = XInternAtom(dpy, "XdndTypeList", False);
+atoms[XdndPosition] = XInternAtom(dpy, "XdndPosition", False);
+atoms[XdndStatus] = XInternAtom(dpy, "XdndStatus", False);
+atoms[XdndLeave] = XInternAtom(dpy, "XdndLeave", False);
+atoms[XdndDrop] = XInternAtom(dpy, "XdndDrop", False);
+atoms[XdndFinished] = XInternAtom(dpy, "XdndFinished", False);
+atoms[XdndActionCopy] = XInternAtom(dpy, "XdndActionCopy", False);
 	/* create main window and tool windown */
 	Pixmap pix;
 	unsigned char bits[8] = { 136, 68, 34, 17, 8, 4, 2, 1 };
@@ -102,9 +124,10 @@ dnd = XInternAtom(dpy, "XdndAware", False);
 	win = XCreateWindow(dpy, root, 0, 0, ww=640, wh=480, 0, dep,
 			InputOutput, vis, CWEventMask | CWBackPixmap, &wa);
 	XStoreName(dpy, win, "Magoo: Images");
-Atom atom = XInternAtom(dpy, "ATOM", False);
-Atom fname = XInternAtom(dpy, "FILENAME", False);
-XChangeProperty(dpy, win, dnd, atom, 32, PropModeReplace, (unsigned char *)&fname, 1);
+unsigned char dndver = 5;
+XChangeProperty(dpy, win, atoms[XdndAware], XA_ATOM, 32,
+		PropModeReplace, &dndver, 1);
+
 	// TODO create cursors : crosshair ...
 	XFlush(dpy);
 	return 0;
@@ -159,8 +182,59 @@ void buttonpress(XEvent *ev) {
 	}
 }
 
+/*
+static void _send_msg(Window target, int type, msgdata ) {
+	XEvent ev;
+	ev.type = ClientMessage;
+	ev.xclient.window = target;
+	ev.xclient.message_type = atoms[type];
+	ev.xclient.format = 32;
+	ev.xclient.data.l[0] = atoms[msg];
+	ev.xclient.data.l[1] = CurrentTime;
+	XSendEvent(dpy, target, False, NoEventMask, &ev);
+}
+*/
+
 void clientmessage(XEvent *ev) {
-	fprintf(stderr, "Client Message\n");
+	static Window source = None;
+	XClientMessageEvent *e = &ev->xclient;
+	Atom action;
+	Window igw;
+	XEvent msg;
+	msg.type = ClientMessage;
+	msg.xclient.format = 32;
+	int wx, wy, ww, wh, ign;
+	XGetGeometry(dpy, win, &igw, &wx, &wy, &ww, &wh, &ign, &ign);
+	if (e->message_type == atoms[XdndEnter]) {
+		source = e->data.l[0];
+	}
+	else if (e->message_type == atoms[XdndPosition]) {
+		action = e->data.l[4];
+		msg.xclient.message_type = atoms[XdndStatus];
+		msg.xclient.window = source;
+		msg.xclient.data.l[0] = win;
+		msg.xclient.data.l[1] = 0x01;
+		msg.xclient.data.l[2] = (wx << 16) | wy;
+		msg.xclient.data.l[3] = (ww << 16) | wh;
+		msg.xclient.data.l[4] = atoms[XdndActionCopy];
+		XSendEvent(dpy, source, False, NoEventMask, &msg);
+	}
+	else if (e->message_type == atoms[XdndLeave]) {
+		source = None;
+	}
+	else if (e->message_type == atoms[XdndDrop]) {
+		XConvertSelection(dpy, atoms[XdndSelection], atoms[FileType],
+			atoms[FileName], win, e->data.l[2]);
+		msg.xclient.message_type = atoms[XdndFinished];
+		msg.xclient.window = source;
+		msg.xclient.data.l[0] = win;
+		msg.xclient.data.l[1] = 0x1;
+		msg.xclient.data.l[2] = atoms[XdndActionCopy];
+		msg.xclient.data.l[3] = 0;
+		msg.xclient.data.l[4] = 0;
+		XSendEvent(dpy, source, False, NoEventMask, &msg);
+		source = None;
+	}
 }
 
 void expose(XEvent *ev) {
@@ -173,4 +247,17 @@ void keypress(XEvent *ev) {
 }
 
 void propertynotify(XEvent *ev) {
+}
+
+void selectionnotify(XEvent *ev) {
+	XSelectionEvent *e = &ev->xselection;
+	if (e->property != atoms[FileName]) return;
+	Atom type;
+	int fmt;
+	unsigned long n, nn;
+	unsigned char *data;
+	XGetWindowProperty(dpy, win, e->property, 0, 0x8000000L, False,
+			AnyPropertyType, &type, &fmt, &n, &nn, &data);
+	image_load(data);
+	XFree(data);
 }
