@@ -6,7 +6,7 @@
 	"* A single numerical value from 0-255 can be specified to set the level\n"
 	"* Default = 64" },
 
-{ "area",      cmd_area,      "calculate the area of the current crop region",
+{ "area",      cmd_area,      "alias for \033[3mcount total\033[0m",
 	NULL },
 
 { "clear",     cmd_clear,     "clear the current crop boundaries",
@@ -16,15 +16,18 @@
 	NULL },
 
 { "color",     cmd_color,     "set/show the current highlight color",
-	"[val val val [val]]\n\n"
+	"[num val val val [val]]\n\n"
 	"* Set or show the color used to highlight points within the threshold criteria\n"
-	"* With no paramaters, \033[3mcolor\033[0m returns the current setting\n"
+	"* With no paramaters, \033[3mcolor\033[0m returns the current settings\n"
+	"* To set a color, the first parameter should specify color for threshold 1 or 2\n"
 	"* Four numerical values from 0-255 can be specified to set the Red, Green, Blue, and Alpha levels\n"
-	"* In the absence of a fourth parameter, an alpha value of 255 (fully opaque) will be used\n"
+	"* In the absence of a fifth parameter, an alpha value of 255 (fully opaque) will be used\n"
 	"* If the alpha level is set to 0, the original image will be used at full opacity" },
 
 { "count",     cmd_count,     "calculate the area of the current crop region within the threshold criteria",
-	NULL },
+	"[ 1 | 2 | total ]\n\n"
+	"* Calculate the area of the selected region within the specified threshold\n"
+	"* With no parameter, values for each threshold are displayed\n" },
 
 { "echo",      cmd_echo,      "write a string to the output",
 	"[string]\n\n"
@@ -68,10 +71,13 @@
 { "quit",      cmd_quit,      NULL,
 	NULL },
 
-{ "ratio",     cmd_ratio,     "calculate the ratio of the current crop region",
-	"\n\n"
+{ "ratio",     cmd_ratio,     "calculate the ratio(s) of the current crop region",
+	"[ 1 | 2 | relative | gratio ]\n\n"
 	"* Calculate the ratio of \033[3mcount\033[0m to \033[3marea\033[0m for the current crop region\n"
-	"* Ratios are not scaled to percents and will range from 0.0 - 1.0" },
+	"* Ratios are not scaled to percents and will range from 0.0 - 1.0\n"
+	"* Specify threshold \033[3m1\033[0m or \033[1m2\033[0m to get the ratio over the total\n"
+	"* Specify \033[3mrelative\033[0m for the ratio of threshold 1 over 2\n"
+	"* Specify \033[3mgratio\033[0m for the area-based gratio of 1 over 1+2\n" },
 
 { "shell",     cmd_shell,     "display the output of a shell command",
 	"command-string\n\n"

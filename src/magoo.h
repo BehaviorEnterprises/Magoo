@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <signal.h>
 #include <readline/readline.h>
 #include <X11/Xlib.h>
@@ -19,7 +20,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/cursorfont.h>
-#include <gdk/gdk.h>
+//#include <gdk/gdk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <cairo.h>
 #include <cairo-xlib.h>
@@ -32,6 +33,8 @@ STRING(PROGRAM_NAME) " v" STRING(PROGRAM_VER) "\n" \
 "Copyright (C) 2014 Behavior Enterprises <http://behaviorenterprises.com>\n" \
 "License GPL3: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>\n" \
 "Written by Jesse McClure\n"
+
+#define NTHRESH	2
 
 typedef struct Col { unsigned char r, g, b, a; } Col;
 
@@ -50,7 +53,7 @@ struct Img {
 	struct {
 		cairo_surface_t *pix;
 		Col low, hi, pseudo;
-	} threshold;
+	} thresh[NTHRESH];
 	struct {
 		cairo_surface_t *pix;
 		int x, y, w, h;
@@ -59,7 +62,7 @@ struct Img {
 };
 
 typedef struct Conf {
-	struct { Col low, hi, pseudo; } threshold;
+	struct { Col low, hi, pseudo; } thresh[NTHRESH];
 	Col line;
 	unsigned char alpha;
 	const char *prompt;

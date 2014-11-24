@@ -9,9 +9,8 @@ will be posted here as development progresses.
 
 ##Todo
 
-* Occasional X freeze on shutdown
 * Man page needed
-* Other calculations/analyses (?)
 * Tab completion for parameters (?)
+* Eraser tool
 
 
