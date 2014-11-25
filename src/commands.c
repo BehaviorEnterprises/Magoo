@@ -182,22 +182,24 @@ int cmd_count(const char *arg) {
 int cmd_color(const char *arg) {
 	GET_FOCUSED_IMG
 	Col *c;
-	unsigned short int n, r, g, b, a;
+	uint32_t u;
+	uint8_t n;
 	if (!arg) {
-		fprintf(out, "RGBA:\n");
+		fprintf(out, "   AARRGGBB\n");
 		for (n = 0; n < NTHRESH; ++n) {
-			c = &focused_img->thresh[n].pseudo;
-			fprintf(out, "%d: %03d %03d %03d %03d\n", n + 1, c->r, c->g, c->b, c->a);
+			//c = &focused_img->thresh[n].pseudo;
+c = &conf.thresh[n].pseudo;
+			fprintf(out, "%d: %X\n", n + 1, c->u);
 		}
 		return 0;
 	}
-	int ret = sscanf(arg, "%hhu %hhu %hhu %hhu %hhu", &n, &r, &g, &b, &a);
+	int ret = sscanf(arg, "%hhu %X", &n, &u);
 	if (!ret || n > NTHRESH) return command("help color");
 	if (!n) n = 1;
-	c = &focused_img->thresh[n - 1].pseudo;
+	//c = &focused_img->thresh[n - 1].pseudo;
+c = &conf.thresh[n - 1].pseudo;
 	if (ret == 1) c->a = 0;
-	if (ret < 5) a = 255;
-	c->r = r; c->g = g; c->b = b; c->a = a;
+	c->u = u;
 	img_threshold_draw(focused_img);
 	img_draw(focused_img);
 	XFlush(dpy);
@@ -250,37 +252,39 @@ int cmd_info(const char *arg) {
 	unsigned char *source_ptr, *sptr;
 	int source_stride;
 	Bool check;
-	Col low, hi;
-	unsigned long long nR = 0L, nG = 0L, nB = 0L;
+	Col min, avg, max;
+	unsigned long long nR = 0UL, nG = 0UL, nB = 0UL;
 	int n = 0;
 	cairo_clip_preserve(img->ctx);
 	cairo_clip_extents(img->ctx, &x1, &y1, &x2, &y2);
 	cairo_surface_flush(img->source.pix);
 	source_stride = cairo_image_surface_get_stride(img->source.pix);
 	source_ptr = cairo_image_surface_get_data(img->source.pix);
-	low = (Col) {255, 255, 255};
-	hi = (Col) {0, 0, 0};
+	min.u = 0x00FFFFFF;
+	avg.u = 0x00000000;
+	max.u = 0x00000000;
 	if (x1 == 0 && y1 == 0 && x2 == 0 && y2 == 0) check = False;
 	else check = True;
 	for (i = 0; i < img->w; i++) {
 		for (j = 0; j < img->h; j++) {
 			if (check && !cairo_in_clip(img->ctx, i, j)) continue;
 			sptr = source_ptr + j * source_stride + i * 4;
-			if (low.b > sptr[0]) low.b = sptr[0];
-			if (low.g > sptr[1]) low.g = sptr[1];
-			if (low.r > sptr[2]) low.r = sptr[2];
-			if (hi.b < sptr[0]) hi.b = sptr[0];
-			if (hi.g < sptr[1]) hi.g = sptr[1];
-			if (hi.r < sptr[2]) hi.r = sptr[2];
+			if (min.b > sptr[0]) min.b = sptr[0];
+			if (min.g > sptr[1]) min.g = sptr[1];
+			if (min.r > sptr[2]) min.r = sptr[2];
+			if (min.b < sptr[0]) max.b = sptr[0];
+			if (min.g < sptr[1]) max.g = sptr[1];
+			if (min.r < sptr[2]) max.r = sptr[2];
 			nB += sptr[0];
 			nG += sptr[1];
 			nR += sptr[2];
 			n += 1;
 		}
 	}
-	fprintf(out, "     R   G   B \nLO: %03d %03d %03d\nHI: %03d %03d %03d\n"
-			"AVG %03d %03d %03d\n", low.r, low.g, low.b, hi.r, hi.g, hi.b,
-			(int) (nR / (float) n), (int) (nG / (float) n), (int) (nB / (float) n));
+	avg.r = nR / (float) n;
+	avg.g = nG / (float) n;
+	avg.b = nB / (float) n;
+	fprintf(out, "     RRGGBB \nMin: %X\nAvg: %X\nMax: %X\n", min.u, avg.u, max.u);
 }
 
 int cmd_list(const char *arg) {
@@ -288,10 +292,8 @@ int cmd_list(const char *arg) {
 	int i = 0;
 	for (img = imgs; img; img = img->next) {
 		i++;
-		if (focused_img == img)
-			fprintf(out, "(%d) %s\n", i, img->source.name);
-		else
-			fprintf(out, " %d  %s\n", i, img->source.name);
+		if (focused_img == img) fprintf(out, "*%d: %s\n", i, img->source.name);
+		else fprintf(out, " %d: %s\n", i, img->source.name);
 	}
 }
 
@@ -329,7 +331,8 @@ int cmd_ratio(const char *arg) {
 		long sum = 0;
 		for (n = 0; n < NTHRESH; ++n) sum += ret[n];
 		for (n = 0; n < NTHRESH; ++n) {
-			c = &focused_img->thresh[n].pseudo;
+			//c = &focused_img->thresh[n].pseudo;
+c = &conf.thresh[n].pseudo;
 			if (arg) fprintf(out, "%d: %Lf\n", n + 1, ret[n] / (long double) sum);
 			else fprintf(out, "%d: %Lf\n", n + 1, ret[n] / (long double) total);
 		}
@@ -377,29 +380,22 @@ int cmd_threshold(const char *arg) {
 	Col *low, *hi;
 	uint8_t n, r, g, b, ret;
 	if (!arg) {
-		fprintf(out, "RGB   LOW | HI\n");
 		for (n = 0; n < NTHRESH; ++n) {
-			low = &focused_img->thresh[n].low;
-			hi = &focused_img->thresh[n].hi;
-			fprintf(out, "%d: %03d %03d %03d | ", n + 1, low->r, low->g, low->b);
-			fprintf(out, "%03d %03d %03d\n", hi->r, hi->g, hi->b);
+			//low = &focused_img->thresh[n].low; // TODO use conf instead of img?
+			//hi = &focused_img->thresh[n].hi;
+low = &conf.thresh[n].low;
+hi = &conf.thresh[n].hi;
+			fprintf(out, "%d: %06X -> %06X\n", n + 1, low->u, hi->u);
 		}
 		return;
 	}
-	char spec[64];
-	ret = sscanf(arg, "%hhu %s %hhu %hhu %hhu", &n, spec, &r, &g, &b);
-	if (ret < 3 || n > NTHRESH) return command("help threshold");
-	if (!n) n = 1;
-	low = &focused_img->thresh[n - 1].low;
-	hi = &focused_img->thresh[n - 1].hi;
-	switch (spec[0]) {
-		case 'r': case 'R': low->r = r; hi->r = g; break;
-		case 'g': case 'G': low->g = r; hi->g = g; break;
-		case 'b': case 'B': low->b = r; hi->b = g; break;
-		case 'l': case 'L': low->r = r; low->g = g; low->b = b; break;
-		case 'h': case 'H': hi->r = r; hi->g = g; hi->b = b; break;
-		default: return command("help threshold");
-	}
+	ret = sscanf(arg, "%hhu", &n);
+	if (!ret || (--n) >= NTHRESH) return command("help threshold");
+	//low = &focused_img->thresh[n].low; // TODO use conf instead of img
+	//hi = &focused_img->thresh[n].hi;
+low = &conf.thresh[n].low;
+hi = &conf.thresh[n].hi;
+	ret = sscanf(arg, "%*hhu %X %X", &low->u, &hi->u);
 	img_threshold_draw(focused_img);
 	img_draw(focused_img);
 	XFlush(dpy);

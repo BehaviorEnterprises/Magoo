@@ -36,7 +36,10 @@ STRING(PROGRAM_NAME) " v" STRING(PROGRAM_VER) "\n" \
 
 #define NTHRESH	2
 
-typedef struct Col { unsigned char r, g, b, a; } Col;
+typedef union {
+	uint32_t u;
+	struct { uint8_t b, g, r, a; };
+} Col;
 
 typedef struct Img Img;
 struct Img {
@@ -50,13 +53,13 @@ struct Img {
 		char *name;
 		unsigned char alpha;
 	} source;
-	struct {
+	struct { // TODO get rid of struct
 		cairo_surface_t *pix;
-		Col low, hi, pseudo;
+//		Col low, hi, pseudo;
 	} thresh[NTHRESH];
-	struct {
-		cairo_surface_t *pix;
-		int x, y, w, h;
+	struct { // TODO get rid of struct
+//		cairo_surface_t *pix;
+//		int x, y, w, h;
 		Col line;
 	} crop;
 };

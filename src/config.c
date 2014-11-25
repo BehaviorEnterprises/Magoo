@@ -13,23 +13,27 @@ int config_free() {
 
 int config_init(int argc, const char **argv) {
 	/* start with reasonable defaults: */
-	uint8_t n, step = 255 / NTHRESH, res, rem;
-	Col last = (Col) {0, 0, 0, 255};
+	uint8_t n, res, rem;
+	Col last, step;
+	last.u = 0xFF000000;
+	step.r = 255 / NTHRESH;
+	step.g = 255 / NTHRESH;
+	step.b = 255 / NTHRESH;
 	for (n = 0; n < NTHRESH; ++n) {
 		conf.thresh[n].low = last;
-		last.r += step; last.g += step; last.b += step;
+		last.u += step.u;
 		conf.thresh[n].hi = last;
 		res = (n / 6) + 1; rem = n % 6;
-		conf.thresh[n].pseudo = (Col) { /* yellow, blue, red, green, purple, black */
-			(int) (rem % 2 == 0 ? 255 : 0) / res,
-			(int) (rem==0 ? 255 : (rem==3 ? 255 : 0)) / res,
-			(int) (rem==1 ? 255 : (rem==4 ? 255 : 0)) / res,
-			255,
-		};
+		conf.thresh[n].pseudo.a = 180;
+		/* yellow, blue, red, green, purple, black */
+		// TODO divide by res is wrong
+		conf.thresh[n].pseudo.r = (rem % 2 == 0 ? 255 : 0) / res;
+		conf.thresh[n].pseudo.g = (rem==0 ? 255 : (rem==3 ? 255 : 0)) / res;
+		conf.thresh[n].pseudo.b = (rem==1 ? 255 : (rem==4 ? 255 : 0)) / res;
 	}
-	conf.thresh[NTHRESH - 1].hi = (Col) { 255, 255, 255, 255 };
+	conf.thresh[NTHRESH - 1].hi.u = 0xFFFFFFFF;
 	conf.alpha = 255;
-	conf.line = (Col) {255, 180, 40, 255};
+	conf.line.u = 0xFFFFDD0E;
 	conf.prompt = NULL;
 	imgs = NULL;
 	/* loop through args: */

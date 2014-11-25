@@ -20,8 +20,10 @@ int img_threshold_draw(Img *img) {
 		cairo_surface_flush(img->thresh[n].pix);
 		dest_stride[n] = cairo_image_surface_get_stride(img->thresh[n].pix);
 		dest[n] = cairo_image_surface_get_data(img->thresh[n].pix);
-		low[n] = &img->thresh[n].low;
-		hi[n] = &img->thresh[n].hi;
+		//low[n] = &img->thresh[n].low;
+		//hi[n] = &img->thresh[n].hi;
+low[n] = &conf.thresh[n].low;
+hi[n] = &conf.thresh[n].hi;
 	}
 	for (j = j0; j < jN; j++) {
 		for (i = i0; i < iN; i++) {
@@ -68,13 +70,13 @@ Img *cairo_image_init(const char *fname) {
 	uint8_t n;
 	for (n = 0; n < NTHRESH; ++n) {
 		img->thresh[n].pix = cairo_image_surface_create(CAIRO_FORMAT_A8, img->w, img->h);
-		img->thresh[n].low.r = conf.thresh[n].low.r;
-		img->thresh[n].low.g = conf.thresh[n].low.g;
-		img->thresh[n].low.b = conf.thresh[n].low.b;
-		img->thresh[n].hi.r = conf.thresh[n].hi.r;
-		img->thresh[n].hi.g = conf.thresh[n].hi.g;
-		img->thresh[n].hi.b = conf.thresh[n].hi.b;
-		img->thresh[n].pseudo = conf.thresh[n].pseudo;
+//		img->thresh[n].low.r = conf.thresh[n].low.r;
+//		img->thresh[n].low.g = conf.thresh[n].low.g;
+//		img->thresh[n].low.b = conf.thresh[n].low.b;
+//		img->thresh[n].hi.r = conf.thresh[n].hi.r;
+//		img->thresh[n].hi.g = conf.thresh[n].hi.g;
+//		img->thresh[n].hi.b = conf.thresh[n].hi.b;
+//		img->thresh[n].pseudo = conf.thresh[n].pseudo;
 	}
 	img->crop.line = conf.line;
 	img->source.alpha = conf.alpha;
@@ -120,7 +122,8 @@ int img_draw(Img *img) {
 	uint8_t n;
 	for (n = 0; n < NTHRESH; ++n) {
 		cairo_set_source_surface(img->ctx, img->source.pix, 0, 0);
-		c = &img->thresh[n].pseudo;
+		//c = &img->thresh[n].pseudo;
+c = &conf.thresh[n].pseudo;
 		if (c->a)
 			cairo_set_source_rgba(img->ctx, c->r / 255.0, c->g / 255.0, c->b / 255.0, c->a);
 		cairo_mask_surface(img->ctx, img->thresh[n].pix, 0, 0);
