@@ -21,12 +21,14 @@ enum atom_type {
 	XdndActionCopy,
 	XdndEnter, XdndLeave, XdndDrop, XdndFinished,
 	XdndPosition, XdndStatus,
+	WmProtocols, WmDeleteWindow,
 	LASTAtom
 };
 
 static Atom atoms[LASTAtom];
 
 static Window root, win;
+static Cursor cursor_draw, cursor_poly, cursor_move;
 static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]     = buttonpress,
 	[ClientMessage]	= clientmessage,
@@ -61,6 +63,9 @@ int main_loop() {
 				XNextEvent(dpy, &ev);
 				if (ev.type < LASTEvent && handler[ev.type])
 					handler[ev.type](&ev);
+				else if (ev.type == UnmapNotify) {
+					XMapWindow(dpy, win);
+				}
 			}
 		}
 		if (FD_ISSET(input, &fds)) {
@@ -82,6 +87,11 @@ int xlib_image_init(Img *img) {
 	return 0;
 }
 
+int xlib_draw() {
+	if (conf.draw.a == MODE_DRAW) XDefineCursor(dpy, win, cursor_draw);
+	else XDefineCursor(dpy, win, cursor_poly);
+}
+
 int xlib_image_free(Img *img) {
 	XDestroyWindow(dpy, img->win);
 	XFlush(dpy);
@@ -99,18 +109,20 @@ int xlib_init() {
 	vis = DefaultVisual(dpy, scr);
 	gc = DefaultGC(dpy, scr);
 	root = RootWindow(dpy, scr);
-atoms[FileType] = XInternAtom(dpy, "text/uri-list", False);
-atoms[FileName] = XInternAtom(dpy, "MagooFileName", False);
-atoms[XdndAware] = XInternAtom(dpy, "XdndAware", False);
-atoms[XdndSelection] = XInternAtom(dpy, "XdndSelection", False);
-atoms[XdndEnter] = XInternAtom(dpy, "XdndEnter", False);
-atoms[XdndTypeList] = XInternAtom(dpy, "XdndTypeList", False);
-atoms[XdndPosition] = XInternAtom(dpy, "XdndPosition", False);
-atoms[XdndStatus] = XInternAtom(dpy, "XdndStatus", False);
-atoms[XdndLeave] = XInternAtom(dpy, "XdndLeave", False);
-atoms[XdndDrop] = XInternAtom(dpy, "XdndDrop", False);
-atoms[XdndFinished] = XInternAtom(dpy, "XdndFinished", False);
-atoms[XdndActionCopy] = XInternAtom(dpy, "XdndActionCopy", False);
+	atoms[FileType] = XInternAtom(dpy, "text/uri-list", False);
+	atoms[FileName] = XInternAtom(dpy, "MagooFileName", False);
+	atoms[XdndAware] = XInternAtom(dpy, "XdndAware", False);
+	atoms[XdndSelection] = XInternAtom(dpy, "XdndSelection", False);
+	atoms[XdndEnter] = XInternAtom(dpy, "XdndEnter", False);
+	atoms[XdndTypeList] = XInternAtom(dpy, "XdndTypeList", False);
+	atoms[XdndPosition] = XInternAtom(dpy, "XdndPosition", False);
+	atoms[XdndStatus] = XInternAtom(dpy, "XdndStatus", False);
+	atoms[XdndLeave] = XInternAtom(dpy, "XdndLeave", False);
+	atoms[XdndDrop] = XInternAtom(dpy, "XdndDrop", False);
+	atoms[XdndFinished] = XInternAtom(dpy, "XdndFinished", False);
+	atoms[XdndActionCopy] = XInternAtom(dpy, "XdndActionCopy", False);
+	atoms[WmProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
+	atoms[WmDeleteWindow] = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
 	/* create main window and tool windown */
 	Pixmap pix;
 	unsigned char bits[8] = { 136, 68, 34, 17, 8, 4, 2, 1 };
@@ -124,17 +136,21 @@ atoms[XdndActionCopy] = XInternAtom(dpy, "XdndActionCopy", False);
 	win = XCreateWindow(dpy, root, 0, 0, ww=640, wh=480, 0, dep,
 			InputOutput, vis, CWEventMask | CWBackPixmap, &wa);
 	XStoreName(dpy, win, "Magoo: Images");
-unsigned char dndver = 5;
-XChangeProperty(dpy, win, atoms[XdndAware], XA_ATOM, 32,
-		PropModeReplace, &dndver, 1);
-
-	// TODO create cursors : crosshair ...
+	unsigned char dndver = 5;
+	XChangeProperty(dpy, win, atoms[XdndAware], XA_ATOM, 32, PropModeReplace, &dndver, 1);
+	XSetWMProtocols(dpy, win, &atoms[WmDeleteWindow], 1);
+	cursor_draw = XCreateFontCursor(dpy, 68);
+	cursor_poly = XCreateFontCursor(dpy, 34);
+	cursor_move = XCreateFontCursor(dpy, 52);
 	XFlush(dpy);
 	return 0;
 }
 
 int xlib_free() {
 	while (imgs) image_unload(imgs);
+	XFreeCursor(dpy, cursor_draw);
+	XFreeCursor(dpy, cursor_poly);
+	XFreeCursor(dpy, cursor_move);
 	XDestroyWindow(dpy, win);
 	XSync(dpy,True);
 	XCloseDisplay(dpy);
@@ -151,6 +167,7 @@ void buttonpress(XEvent *ev) {
 	if (e->button == 1) {
 		XRaiseWindow(dpy, img->win);
 		focused_img = img;
+		XDefineCursor(dpy, win, cursor_move);
 		XGrabPointer(dpy, root, True, PointerMotionMask | ButtonReleaseMask,
 				GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
 		int xx = e->x_root, yy = e->y_root, dx, dy;
@@ -164,21 +181,29 @@ void buttonpress(XEvent *ev) {
 			XMoveWindow(dpy, img->win, img->x, img->y);
 		}
 		XUngrabPointer(dpy, CurrentTime);
+		if (conf.draw.a == MODE_DRAW) XDefineCursor(dpy, win, cursor_draw);
+		else XDefineCursor(dpy, win, cursor_poly);
 	}
 	else if (e->button == 2) {
-		cairo_close_path(img->ctx);
-		cairo_new_sub_path(img->ctx);
-		img_draw(img);
-		path_open = False;
+		if (conf.draw.a == MODE_DRAW) command("layer");
+		else if (conf.draw.a == MODE_POLY) {
+			cairo_close_path(img->ctx);
+			cairo_new_sub_path(img->ctx);
+			img_draw(img);
+			path_open = False;
+		}
 	}
 	else if (e->button == 3) {
-		if (!path_open) cairo_arc(img->ctx, e->x, e->y, 1, 0, 2*M_PI);
-		cairo_line_to(img->ctx, e->x / img->scale, e->y / img->scale);
-		Col *c = &img->crop.line;
-		cairo_set_source_rgba(img->ctx, c->r/255.0, c->g/255.0, c->b/255.0, c->a);
-		cairo_stroke_preserve(img->ctx);
-		XFlush(dpy);
-		path_open = True;
+		if (conf.draw.a == MODE_DRAW) { /* TODO */ }
+		else if (conf.draw.a == MODE_POLY) {
+			if (!path_open) cairo_arc(img->ctx, e->x, e->y, 1, 0, 2*M_PI);
+			cairo_line_to(img->ctx, e->x / img->scale, e->y / img->scale);
+			Col *c = &conf.line;
+			cairo_set_source_rgba(img->ctx, c->r/255.0, c->g/255.0, c->b/255.0, c->a);
+			cairo_stroke_preserve(img->ctx);
+			XFlush(dpy);
+			path_open = True;
+		}
 	}
 }
 
@@ -235,6 +260,11 @@ void clientmessage(XEvent *ev) {
 		XSendEvent(dpy, source, False, NoEventMask, &msg);
 		source = None;
 	}
+	else if (e->message_type == atoms[WmProtocols]) {
+		if (e->data.l[0] == atoms[WmDeleteWindow]) {
+			// IGNORE!
+		}
+	}
 }
 
 void expose(XEvent *ev) {
@@ -261,3 +291,4 @@ void selectionnotify(XEvent *ev) {
 	image_load(data);
 	XFree(data);
 }
+

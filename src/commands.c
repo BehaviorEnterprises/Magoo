@@ -22,7 +22,9 @@ static int cmd_count(const char *);
 static int cmd_echo(const char *);
 static int cmd_help(const char *);
 static int cmd_info(const char *);
+static int cmd_layer(const char *);
 static int cmd_list(const char *);
+static int cmd_mouse(const char *);
 static int cmd_move(const char *);
 static int cmd_name(const char *);
 static int cmd_open(const char *);
@@ -100,34 +102,41 @@ int image_unload(Img *img) {
 |* Local "helper" functions
 \****************************/
 
-static long _calculate(long *ret) {
-	GET_FOCUSED_IMG
+static long *_calculate(long *total) {
+	long *ret = (long *) calloc(conf.levels, sizeof(long));
+	if (!focused_img) {
+		fprintf(stderr, "no image focused\n");
+		return ret;
+	}
 	Img *img = focused_img;
 	int i, j, n;
 	double x1, x2, y1, y2;
 	long area = 0;
 	cairo_clip_preserve(img->ctx);
 	cairo_clip_extents(img->ctx, &x1, &y1, &x2, &y2);
-	uint8_t *dptr[NTHRESH];
-	int dstride[NTHRESH];
-	for (n = 0; n < NTHRESH; ++n) {
-		cairo_surface_flush(img->thresh[n].pix);
-		dptr[n] = cairo_image_surface_get_data(img->thresh[n].pix);
-		dstride[n] = cairo_image_surface_get_stride(img->thresh[n].pix);
-		ret[n] = 0;
-	}
+	uint8_t full, *dptr;
+	int dstride;
 	Bool crop = True;
 	if (x1 == 0 && y1 == 0 && x2 == 0 && y2 == 0) crop = False;
-	for (i = 0; i < img->w; i++) {
-		for (j = 0; j < img->h; j++) {
-			if (crop && !cairo_in_clip(img->ctx, i, j)) continue;
-			for (n = 0; n < NTHRESH; ++n)
-				ret[n] += ( *(dptr[n] + j * dstride[n] + i) == 255 ? 1 : 0);
-			area += 1;
+	for (n = 0; n < conf.levels; ++n) {
+		cairo_surface_flush(img->mask[n]);
+		dptr = cairo_image_surface_get_data(img->mask[n]);
+		dstride = cairo_image_surface_get_stride(img->mask[n]);
+		ret[n] = 0;
+		full = conf.thresh[n].pseudo.a;
+		if (full == 0) full = 255;
+		for (i = 0; i < img->w; i++) {
+			for (j = 0; j < img->h; j++) {
+				if (crop && !cairo_in_clip(img->ctx, i, j)) continue;
+				//ret[n] += ( *(dptr + j * dstride + i) == 255 ? 1 : 0);
+				ret[n] += ( *(dptr + j * dstride + i) == full ? 1 : 0);
+				if (n == 0) area += 1;
+			}
 		}
 	}
 	cairo_reset_clip(img->ctx);
-	return area;
+	*total = area;
+	return ret;
 }
 
 /****************************\
@@ -136,9 +145,9 @@ static long _calculate(long *ret) {
 
 int cmd_alpha(const char *arg) {
 	GET_FOCUSED_IMG
-	if (!arg) fprintf(out, "%03d\n", focused_img->source.alpha);
+	if (!arg) fprintf(out, "%03d\n", focused_img->alpha);
 	else {
-		sscanf(arg, "%hhu", &focused_img->source.alpha);
+		sscanf(arg, "%hhu", &focused_img->alpha);
 		img_draw(focused_img);
 		XFlush(dpy);
 	}
@@ -164,18 +173,19 @@ int cmd_close(const char *arg) {
 }
 
 int cmd_count(const char *arg) {
-	long ret[NTHRESH];
-	long total = _calculate(ret);
+	long total;
+	long *ret = _calculate(&total);
 	uint8_t n;
 	if (!arg) {
-		for (n = 0; n < NTHRESH; ++n)
+		for (n = 0; n < conf.levels; ++n)
 			fprintf(out, "%d: %ld\n", n + 1, ret[n]);
 		fprintf(out, "Total: %ld\n", total);
 	}
 	else if (arg[0] == 't') fprintf(out, "%ld\n", total);
 	else if (arg[0] == 'a') fprintf(out, "%ld\n", total);
-	else if ( (n=atoi(arg)) ) fprintf(out, "%ld\n", ret[n-1]);
+	else if ( (n=atoi(arg)) && n && n <= conf.levels ) fprintf(out, "%ld\n", ret[n-1]);
 	else command("help count");
+	free(ret);
 	return 0;
 }
 
@@ -186,18 +196,16 @@ int cmd_color(const char *arg) {
 	uint8_t n;
 	if (!arg) {
 		fprintf(out, "   AARRGGBB\n");
-		for (n = 0; n < NTHRESH; ++n) {
-			//c = &focused_img->thresh[n].pseudo;
-c = &conf.thresh[n].pseudo;
+		for (n = 0; n < conf.levels; ++n) {
+			c = &conf.thresh[n].pseudo;
 			fprintf(out, "%d: %X\n", n + 1, c->u);
 		}
 		return 0;
 	}
 	int ret = sscanf(arg, "%hhu %X", &n, &u);
-	if (!ret || n > NTHRESH) return command("help color");
+	if (!ret || n > conf.levels) return command("help color");
 	if (!n) n = 1;
-	//c = &focused_img->thresh[n - 1].pseudo;
-c = &conf.thresh[n - 1].pseudo;
+	c = &conf.thresh[n - 1].pseudo;
 	if (ret == 1) c->a = 0;
 	c->u = u;
 	img_threshold_draw(focused_img);
@@ -257,9 +265,9 @@ int cmd_info(const char *arg) {
 	int n = 0;
 	cairo_clip_preserve(img->ctx);
 	cairo_clip_extents(img->ctx, &x1, &y1, &x2, &y2);
-	cairo_surface_flush(img->source.pix);
-	source_stride = cairo_image_surface_get_stride(img->source.pix);
-	source_ptr = cairo_image_surface_get_data(img->source.pix);
+	cairo_surface_flush(img->source);
+	source_stride = cairo_image_surface_get_stride(img->source);
+	source_ptr = cairo_image_surface_get_data(img->source);
 	min.u = 0x00FFFFFF;
 	avg.u = 0x00000000;
 	max.u = 0x00000000;
@@ -284,17 +292,45 @@ int cmd_info(const char *arg) {
 	avg.r = nR / (float) n;
 	avg.g = nG / (float) n;
 	avg.b = nB / (float) n;
-	fprintf(out, "     RRGGBB \nMin: %X\nAvg: %X\nMax: %X\n", min.u, avg.u, max.u);
+	fprintf(out, "     RRGGBB \nMin: %06X\nAvg: %06X\nMax: %06X\n", min.u, avg.u, max.u);
+}
+
+int cmd_layer(const char *arg) {
+	if (!arg) conf.layers = !conf.layers;
+	else switch (arg[0]) {
+		case 'n': case 'f': conf.layers = False; break;
+		default: conf.layers = True; break;
+	}
+	img_threshold_draw(focused_img);
+	img_draw(focused_img);
+	XFlush(dpy);
+	return 0;
 }
 
 int cmd_list(const char *arg) {
 	Img *img;
-	int i = 0;
-	for (img = imgs; img; img = img->next) {
-		i++;
-		if (focused_img == img) fprintf(out, "*%d: %s\n", i, img->source.name);
-		else fprintf(out, " %d: %s\n", i, img->source.name);
+	int i = 1;
+	for (img = imgs; img; img = img->next, ++i) {
+		if (focused_img == img) fprintf(out, "*%d: %s\n", i, img->name);
+		else fprintf(out, " %d: %s\n", i, img->name);
 	}
+	return 0;
+}
+
+int cmd_mouse(const char *arg) {
+	if (!arg) {
+		if (conf.draw.a == MODE_DRAW) fprintf(out, "draw %X\n", conf.draw.u);
+		if (conf.draw.a == MODE_POLY) fprintf(out, "select polygon\n");
+	}
+	else if (arg[0] == 'd') {
+		sscanf(arg, "%*s %X", &conf.draw.u);
+		conf.draw.a = MODE_DRAW;
+	}
+	else {
+		conf.draw.a = MODE_POLY;
+	}
+	img_draw(focused_img);
+	XFlush(dpy);
 }
 
 int cmd_move(const char *arg) {
@@ -309,7 +345,7 @@ int cmd_move(const char *arg) {
 
 int cmd_name(const char *arg) {
 	GET_FOCUSED_IMG
-	fprintf(out,"NAME: %s\n", focused_img->source.name);
+	fprintf(out,"NAME: %s\n", focused_img->name);
 	return 0;
 }
 
@@ -323,26 +359,27 @@ int cmd_open(const char *arg) {
 }
 
 int cmd_ratio(const char *arg) {
-	long ret[NTHRESH];
-	long total = _calculate(ret);
+	long total;
+	long *ret = _calculate(&total);
 	uint8_t n, n1, n2;
 	Col *c;
 	if (!arg || arg[0] == 'r') {
 		long sum = 0;
-		for (n = 0; n < NTHRESH; ++n) sum += ret[n];
-		for (n = 0; n < NTHRESH; ++n) {
-			//c = &focused_img->thresh[n].pseudo;
-c = &conf.thresh[n].pseudo;
+		for (n = 0; n < conf.levels; ++n) sum += ret[n];
+		for (n = 0; n < conf.levels; ++n) {
+			c = &conf.thresh[n].pseudo;
 			if (arg) fprintf(out, "%d: %Lf\n", n + 1, ret[n] / (long double) sum);
 			else fprintf(out, "%d: %Lf\n", n + 1, ret[n] / (long double) total);
 		}
 	}
-	else if (arg[0] == 'g')
+	else if (arg[0] == 'g' && conf.levels > 1)
 		fprintf(out, "%Lf\n", ret[0] / (long double) (ret[0] + ret[1]));
-	else if (sscanf(arg, "%hhu %hhu", &n1, &n2) == 2 && n1 <= NTHRESH && n2 <= NTHRESH )
+	else if (sscanf(arg, "%hhu %hhu", &n1, &n2) == 2 &&
+			n1 <= conf.levels && n2 <= conf.levels)
 		fprintf(out, "%Lf\n", ret[n1-1] / (long double) ret[n2-1]);
 	else
 		command("help ratio");
+	free(ret);
 	return 0;
 }
 
@@ -380,21 +417,17 @@ int cmd_threshold(const char *arg) {
 	Col *low, *hi;
 	uint8_t n, r, g, b, ret;
 	if (!arg) {
-		for (n = 0; n < NTHRESH; ++n) {
-			//low = &focused_img->thresh[n].low; // TODO use conf instead of img?
-			//hi = &focused_img->thresh[n].hi;
-low = &conf.thresh[n].low;
-hi = &conf.thresh[n].hi;
+		for (n = 0; n < conf.levels; ++n) {
+			low = &conf.thresh[n].low;
+			hi = &conf.thresh[n].hi;
 			fprintf(out, "%d: %06X -> %06X\n", n + 1, low->u, hi->u);
 		}
 		return;
 	}
 	ret = sscanf(arg, "%hhu", &n);
-	if (!ret || (--n) >= NTHRESH) return command("help threshold");
-	//low = &focused_img->thresh[n].low; // TODO use conf instead of img
-	//hi = &focused_img->thresh[n].hi;
-low = &conf.thresh[n].low;
-hi = &conf.thresh[n].hi;
+	if (!ret || (--n) >= conf.levels) return command("help threshold");
+	low = &conf.thresh[n].low;
+	hi = &conf.thresh[n].hi;
 	ret = sscanf(arg, "%*hhu %X %X", &low->u, &hi->u);
 	img_threshold_draw(focused_img);
 	img_draw(focused_img);

@@ -1,0 +1,38 @@
+## MAGOO CONFIG
+##
+## www.behaviorenterprises.com/software?pkg=magoo
+
+## levels ##
+## TYPE: positive integer
+## Defines the number of ranges to be highlighted
+## Use at least two levels to allow for g-ratio style calculations
+levels	2
+
+## alpha ##
+## TYPE: 8-bit integer (0 - 255)
+## The opacity level of the background image.
+## A lower opicty works well with highight colors set to 00nnnnnn
+## a 0-value for the highlight color opacity instructs magoo to show
+## the original image at full opacity in that highlighted region
+alpha		255
+
+## line ##
+## TYPE: 32-bit color hex code AARRGGBB
+## Color and opacity for the bounding line drawn around selected areas
+line		AAFFDD0E
+
+## rangeNN ##
+## TYPE: 2 24-bit color hex codes RRGGBB (alpha values are ignored)
+## colorNN ##
+## TYPE: 32-bit color hex code
+## All points in the original image that fall within the defined range
+## will be higlighted with the associated color.  If the alpha value of
+## color is 00 then these pixels will instead keep their original color
+## but be drawn at full opacity.  This 00 alpha setting is only
+## effective at highlighting these regions if the 'alpha' setting above
+## is less than 255.
+range1	000000	A0A0A0
+color1	FFFFFF00
+range2	AAAAAA	FFFFFF
+color2	FF0000FF
+

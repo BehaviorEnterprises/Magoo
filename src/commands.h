@@ -45,7 +45,13 @@
 { "info",      cmd_info,      "get color info for the selected region",
 	NULL },
 
+{ "layer",      cmd_layer,      "toggle layers",
+	NULL },
+
 { "list",      cmd_list,      "list all open images",
+	NULL },
+
+{ "mouse",     cmd_mouse,      "set/show the mouse mode",
 	NULL },
 
 { "move",      cmd_move,      "move image window",

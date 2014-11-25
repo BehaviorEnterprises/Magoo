@@ -34,12 +34,16 @@ STRING(PROGRAM_NAME) " v" STRING(PROGRAM_VER) "\n" \
 "License GPL3: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>\n" \
 "Written by Jesse McClure\n"
 
-#define NTHRESH	2
+enum { MODE_DRAW = 0, MODE_POLY };
 
 typedef union {
 	uint32_t u;
 	struct { uint8_t b, g, r, a; };
 } Col;
+
+typedef struct Threshold {
+	Col low, hi, pseudo;
+} Threshold;
 
 typedef struct Img Img;
 struct Img {
@@ -48,27 +52,19 @@ struct Img {
 	cairo_t *ctx;
 	int x, y, w, h;
 	float scale;
-	struct {
-		cairo_surface_t *pix;
-		char *name;
-		unsigned char alpha;
-	} source;
-	struct { // TODO get rid of struct
-		cairo_surface_t *pix;
-//		Col low, hi, pseudo;
-	} thresh[NTHRESH];
-	struct { // TODO get rid of struct
-//		cairo_surface_t *pix;
-//		int x, y, w, h;
-		Col line;
-	} crop;
+	cairo_surface_t *source;
+	char *name;
+	uint8_t alpha;
+	cairo_surface_t **mask;
+//	Col cropline;
 };
 
 typedef struct Conf {
-	struct { Col low, hi, pseudo; } thresh[NTHRESH];
-	Col line;
-	unsigned char alpha;
-	const char *prompt;
+	Threshold *thresh;
+	Col line, draw;
+	uint8_t alpha, levels;
+	char *prompt;
+	Bool layers;
 } Conf;
 
 typedef struct Command {

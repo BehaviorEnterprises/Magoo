@@ -8,87 +8,65 @@
 #include "magoo.h"
 
 int config_free() {
+	free(conf.thresh);
+	if (conf.prompt) free(conf.prompt);
 	return 0;
 }
 
 int config_init(int argc, const char **argv) {
-	/* start with reasonable defaults: */
-	uint8_t n, res, rem;
-	Col last, step;
-	last.u = 0xFF000000;
-	step.r = 255 / NTHRESH;
-	step.g = 255 / NTHRESH;
-	step.b = 255 / NTHRESH;
-	for (n = 0; n < NTHRESH; ++n) {
-		conf.thresh[n].low = last;
-		last.u += step.u;
-		conf.thresh[n].hi = last;
-		res = (n / 6) + 1; rem = n % 6;
-		conf.thresh[n].pseudo.a = 180;
-		/* yellow, blue, red, green, purple, black */
-		// TODO divide by res is wrong
-		conf.thresh[n].pseudo.r = (rem % 2 == 0 ? 255 : 0) / res;
-		conf.thresh[n].pseudo.g = (rem==0 ? 255 : (rem==3 ? 255 : 0)) / res;
-		conf.thresh[n].pseudo.b = (rem==1 ? 255 : (rem==4 ? 255 : 0)) / res;
-	}
-	conf.thresh[NTHRESH - 1].hi.u = 0xFFFFFFFF;
-	conf.alpha = 255;
-	conf.line.u = 0xFFFFDD0E;
 	conf.prompt = NULL;
+	conf.layers = True;
 	imgs = NULL;
-	/* loop through args: */
-	const char *arg, *prev, **argp;
-	Col c1, c2;
-	int ret;
-	for (argp = (++argv), arg = *argp; arg && argp; arg = *(++argp)) {
-		if (arg[0] == '-') {
-			/* simple flags: */
-			// TODO -h --help -v --version
-			/* options with required arguments: */
-			prev = arg;
-			arg = *(++argp);
-			if (!arg || arg[0] == '-') {
-				fprintf(stderr, "%s missing required argument\n", prev);
-				continue;
-			}
-			if (prev[0] == '-') prev++;
-			switch (prev[0]) {
-				case 'a': /* -a --alpha */
-					ret = sscanf(arg,"%d", &c1.a);
-					if (!ret) fprintf(stderr, "bad argument for %s\n", prev);
-					else conf.alpha = c1.a;
-					break;
-				case 'c': /* -c --color */ // TODO
-					ret = sscanf(arg,"%d,%d,%d,%d", &c1.r, &c1.g, &c1.b, &c1.a);
-					if (ret < 3) fprintf(stderr, "bad argument for %s\n", prev);
-					else conf.thresh[0].pseudo = c1;
-					if (ret == 3) conf.thresh[0].pseudo.a = 255;
-					break;
-				case 'l': /* -l --line */
-					ret = sscanf(arg,"%d,%d,%d,%d", &c1.r, &c1.g, &c1.b, &c1.a);
-					if (ret < 3) fprintf(stderr, "bad argument for %s\n", prev);
-					else conf.line = c1;
-					if (ret == 3) conf.line.a = 255;
-					break;
-				case 'p': /* -p --prompt */
-					/* IGNORE: prompt is processed by console process */
-					break;
-				case 't': /* -t --threshold */ // TODO
-					ret = sscanf(arg,"%d,%d,%d,%d,%d,%d",
-							&c1.r, &c1.g, &c1.b, &c2.r, &c2.g, &c2.b);
-					if (ret != 6) fprintf(stderr, "bad argument for %s\n", prev);
-					else {
-						conf.thresh[0].low = c1;
-						conf.thresh[0].hi = c2;
-					}
-					break;
-				default:
-					fprintf(stderr,"unrecognized parameter \"%s\" ignored.\n",
-							(arg = *(--argp)));
+	FILE *in = NULL;
+	uint8_t n;
+	uint32_t u1, u2;
+	char line[256], var[64], *env;
+	conf.draw.a = MODE_POLY;
+	for (n = 1; n < argc - 1; ++n)
+		if (argv[n][0] == '-' && argv[n][1] == 'F')
+			in = fopen(argv[n+1], "r");
+	if (!in)
+		in = fopen(".magoorc", "r");
+	if (!in && (env=getenv("XDG_CONFIG_HOME"))) {
+		chdir(env);
+		in = fopen("magoo/config", "r");
+	}
+	if (!in && (env=getenv("HOME"))) {
+		chdir(env);
+		in = fopen(".config/magoo/config", "r");
+	}
+	if (!in)
+		in = fopen("/etc/xdg/magoo/config", "r");
+	if (!in) exit(1); // TODO
+	while (fgets(line, 256, in))
+		if (sscanf(line, "levels %hhu\n", &n) == 1) conf.levels = n;
+	conf.thresh = calloc(n, sizeof(Threshold));
+	fseek(in, 0L, SEEK_SET);
+	while (fgets(line, 256, in)) {
+		if (line[0] == '#')
+			continue;
+		else if (sscanf(line, "levels %hhu\n", &n) == 1)
+			continue;
+		else if (sscanf(line, "alpha %hhu", &n) == 1)
+			conf.alpha = n;
+		else if (sscanf(line, "line %X", &u1) == 1)
+			conf.line.u = u1;
+		else if (sscanf(line, "range%hhu %X %X", &n, &u1, &u2) == 3) {
+			if (n && n <= conf.levels) {
+				conf.thresh[n-1].low.u = u1;
+				conf.thresh[n-1].hi.u = u2;
 			}
 		}
-		else image_load(arg);
+		else if (sscanf(line, "color%hhu %X", &n, &u1) == 2) {
+			if (n && n <= conf.levels) {
+				conf.thresh[n-1].pseudo.u = u1;
+			}
+		}
+		else
+			fprintf(stderr, "unrecognized configuration entry \"%s\"\n", line);
 	}
+	for (n = 1; n < argc; ++n)
+		if (argv[n][0] != '-') image_load(argv[n]);
 	return 0;
 }
 

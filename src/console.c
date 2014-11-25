@@ -88,7 +88,7 @@ int console_init(int argc, const char **argv) {
 			case 'p': prompt = argv[i+1]; //break;
 			case 'h': case 'v': help_version(*c); break;
 			case 'a': case 'c': case 'l': case 't': break;
-			default: break;//TODO error
+			default: break;
 		}
 	}
 	/* fork a new process for console input: */
