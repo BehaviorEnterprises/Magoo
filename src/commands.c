@@ -28,6 +28,7 @@ static int cmd_mouse(const char *);
 static int cmd_move(const char *);
 static int cmd_name(const char *);
 static int cmd_open(const char *);
+static int cmd_poly(const char *);
 static int cmd_quit(const char *);
 static int cmd_ratio(const char *);
 static int cmd_shell(const char *);
@@ -319,12 +320,14 @@ int cmd_list(const char *arg) {
 
 int cmd_mouse(const char *arg) {
 	if (!arg) {
-		if (conf.draw.a == MODE_DRAW) fprintf(out, "draw %X\n", conf.draw.u);
-		if (conf.draw.a == MODE_POLY) fprintf(out, "select polygon\n");
+		if (conf.draw.a == MODE_DRAW) fprintf(out, "draw %X %d\n",
+				conf.draw.u, conf.width);
+		else if (conf.draw.a == MODE_POLY) fprintf(out, "select polygon\n");
 	}
 	else if (arg[0] == 'd') {
-		sscanf(arg, "%*s %X", &conf.draw.u);
+		sscanf(arg, "%*s %X %d", &conf.draw.u, &conf.width);
 		conf.draw.a = MODE_DRAW;
+		if (!conf.width) conf.width = 2;
 	}
 	else {
 		conf.draw.a = MODE_POLY;
@@ -358,6 +361,25 @@ int cmd_open(const char *arg) {
 	return 0;
 }
 
+int cmd_poly(const char *arg) {
+	GET_FOCUSED_IMG
+	Img *img = focused_img;
+	int x, y;
+	char *tok, *sptr, *str;
+	str = strdup(arg);
+	cairo_new_sub_path(img->ctx);
+	Col *c = &conf.line;
+	cairo_set_source_rgba(img->ctx, c->r/255.0, c->g/255.0, c->b/255.0, c->a);
+	for (tok=strtok_r(str," \t",&sptr); tok; tok=strtok_r(NULL," \t",&sptr)) {
+		if (sscanf(tok, "%d,%d", &x, &y) == 2)
+			cairo_line_to(img->ctx, x, y);
+	}
+	cairo_close_path(img->ctx);
+	cairo_stroke(img->ctx);
+	free(str);
+	return 0;
+}
+
 int cmd_ratio(const char *arg) {
 	long total;
 	long *ret = _calculate(&total);
@@ -372,11 +394,11 @@ int cmd_ratio(const char *arg) {
 			else fprintf(out, "%d: %Lf\n", n + 1, ret[n] / (long double) total);
 		}
 	}
-	else if (arg[0] == 'g' && conf.levels > 1)
-		fprintf(out, "%Lf\n", ret[0] / (long double) (ret[0] + ret[1]));
 	else if (sscanf(arg, "%hhu %hhu", &n1, &n2) == 2 &&
 			n1 <= conf.levels && n2 <= conf.levels)
 		fprintf(out, "%Lf\n", ret[n1-1] / (long double) ret[n2-1]);
+	else if (sscanf(arg, "%hhu", &n1) == 1 && n1 <= conf.levels)
+		fprintf(out, "%Lf\n", ret[n1-1] / (long double) total);
 	else
 		command("help ratio");
 	free(ret);

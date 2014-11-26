@@ -194,7 +194,30 @@ void buttonpress(XEvent *ev) {
 		}
 	}
 	else if (e->button == 3) {
-		if (conf.draw.a == MODE_DRAW) { /* TODO */ }
+		if (conf.draw.a == MODE_DRAW) {
+			XRaiseWindow(dpy, img->win);
+			focused_img = img;
+cairo_t *ctx = cairo_create(img->source);
+Col *c = &conf.draw;
+			XGrabPointer(dpy, img->win, True, PointerMotionMask | ButtonReleaseMask,
+					GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+cairo_set_source_rgba(ctx, c->r / 255.0, c->g / 255.0,
+		c->b / 255.0, 1.0);
+cairo_set_line_width(ctx, conf.width);
+cairo_move_to(ctx, e->x / img->scale, e->y / img->scale);
+			XEvent ee;
+			while (True) {
+				XMaskEvent(dpy, PointerMotionMask | ButtonReleaseMask, &ee);
+				if (ee.type == ButtonRelease) break;
+cairo_line_to(ctx, ee.xbutton.x / img->scale, ee.xbutton.y / img->scale);
+cairo_stroke_preserve(ctx);
+img_draw(img);
+			}
+			XUngrabPointer(dpy, CurrentTime);
+cairo_stroke(ctx);
+img_threshold_draw(img);
+img_draw(img);
+		}
 		else if (conf.draw.a == MODE_POLY) {
 			if (!path_open) cairo_arc(img->ctx, e->x, e->y, 1, 0, 2*M_PI);
 			cairo_line_to(img->ctx, e->x / img->scale, e->y / img->scale);

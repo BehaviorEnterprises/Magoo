@@ -11,6 +11,5 @@ will be posted here as development progresses.
 
 * Man page needed
 * Tab completion for parameters (?)
-* Eraser tool
 
 

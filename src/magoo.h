@@ -62,7 +62,7 @@ struct Img {
 typedef struct Conf {
 	Threshold *thresh;
 	Col line, draw;
-	uint8_t alpha, levels;
+	uint8_t alpha, levels, width;
 	char *prompt;
 	Bool layers;
 } Conf;

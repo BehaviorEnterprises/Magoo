@@ -2,11 +2,10 @@
 { "alpha",     cmd_alpha,     "set/show the alpha level for the original image",
 	"[val]\n\n"
 	"* Set or show the alpha (opacity) level of the background image\n"
-	"* With no paramaters, \033[3malpha\033[0m returns the current setting\n"
-	"* A single numerical value from 0-255 can be specified to set the level\n"
-	"* Default = 64" },
+	"* With no paramaters, \033[4malpha\033[0m returns the current setting\n"
+	"* A single numerical \033[4mval\033[0m from 0-255 can be specified to set the level" },
 
-{ "area",      cmd_area,      "alias for \033[3mcount total\033[0m",
+{ "area",      cmd_area,      "alias for \033[4mcount total\033[0m",
 	NULL },
 
 { "clear",     cmd_clear,     "clear the current crop boundaries",
@@ -16,22 +15,23 @@
 	NULL },
 
 { "color",     cmd_color,     "set/show the current highlight color",
-	"[num val val val [val]]\n\n"
+	"[val AARRGGBB]\n\n"
 	"* Set or show the color used to highlight points within the threshold criteria\n"
-	"* With no paramaters, \033[3mcolor\033[0m returns the current settings\n"
-	"* To set a color, the first parameter should specify color for threshold 1 or 2\n"
-	"* Four numerical values from 0-255 can be specified to set the Red, Green, Blue, and Alpha levels\n"
-	"* In the absence of a fifth parameter, an alpha value of 255 (fully opaque) will be used\n"
-	"* If the alpha level is set to 0, the original image will be used at full opacity" },
+	"* With no paramaters, \033[4mcolor\033[0m returns the current settings\n"
+	"* To set a color, the first parameter should specify which range color to adjust\n"
+	"* Color is specified as an alpha, red, green, blue, hex code (00-FF for each)\n"
+	"* Setting alpha is optional - with none specified, fully opaque (FF) will be assumed\n"
+	"* If the alpha level is set to 00, the original image will be used at full opacity" },
 
-{ "count",     cmd_count,     "calculate the area of the current crop region within the threshold criteria",
-	"[ 1 | 2 | total ]\n\n"
-	"* Calculate the area of the selected region within the specified threshold\n"
-	"* With no parameter, values for each threshold are displayed\n" },
+{ "count",     cmd_count,     "calculate the area of the currently highlighted regions",
+	"[val | total]\n\n"
+	"* If \033[4mval\033[0m is specified, the area of that highlight region is displayed\n"
+	"* If \033[4mtotal\033[0m is specified, the area of the current crop region is displayed\n"
+	"* With no parameter, values for each region are displayed" },
 
 { "echo",      cmd_echo,      "write a string to the output",
 	"[string]\n\n"
-	"* Writes \033[3mstring\033[0m to the current output\n"
+	"* Writes \033[4mstring\033[0m to the current output\n"
 	"* Can be used to place notes in output sink files" },
 
 { "exit",      cmd_quit,      "exit",
@@ -39,82 +39,84 @@
 
 { "help",      cmd_help,      "show this help menu or learn about commands",
 	"[command]\n\n"
-	"* If \033[3mcommand\033[0m is specified, detailed help will be shown for that command\n"
-	"* Without a \033[3mcommand\033[0m parameter, show the main help menu" },
+	"* If \033[4mcommand\033[0m is specified, detailed help will be shown for that command\n"
+	"* Without a \033[4mcommand\033[0m parameter, show the main help menu" },
 
 { "info",      cmd_info,      "get color info for the selected region",
-	NULL },
+	NULL }, //TODO?
 
-{ "layer",      cmd_layer,      "toggle layers",
+{ "layer",      cmd_layer,      "toggle highlight layer visibility",
 	NULL },
 
 { "list",      cmd_list,      "list all open images",
 	NULL },
 
 { "mouse",     cmd_mouse,      "set/show the mouse mode",
-	NULL },
+	"[polygon | draw RRGGBB]\n\n"
+	"* Specify \033[4mpolygon\033[0m to select crop regions with the mouse\n"
+	"* Speficy \033[4mdraw\033[0m followed by a hex color code to modify the image\n"
+	"* In the absence of a parameter, the current setting is displayed" },
 
 { "move",      cmd_move,      "move image window",
 	"[x y]\n\n"
 	"* Set or show the selected image window position\n"
-	"* With no paramaters, \033[3mmove\033[0m returns the current coordinates\n"
-	"* Two integer values can be specified for the x and y coordinates\n"
+	"* With no paramaters, \033[4mmove\033[0m returns the current coordinates\n"
+	"* Two integer values can be specified for the \033[4mx\033[0m and \033[4my\033[0m coordinates\n"
 	"* Anything other than a numeric parameter will move the window to 0 0\n"
 	"* Moving may be required after a zoom, as the window may be offscreen" },
 
 { "name",      cmd_name,      "name of the focused image",
 	"[string]\n\n"
 	"* Set or show the selected image window name\n"
-	"* With no paramaters, \033[3mname\033[0m returns the current name\n"
-	"* If \033[3mstring\033[0m is provided, the current image name will be set\n"
+	"* With no paramaters, \033[4mname\033[0m returns the current name\n"
+	"* If \033[4mstring\033[0m is provided, the current image name will be set\n"
 	"* Setting the image name currently serves no purpose\n"
 	"* The default name is the basename of the file without the extension" },
 
 { "open",      cmd_open,      "open a new image",
 	"[filename]\n\n"
-	"* Open \033[3mfilename\033[0m as a new image buffer"},
+	"* Open \033[4mfilename\033[0m as a new image buffer"},
 
-{ "quit",      cmd_quit,      NULL,
+{ "polygon",   cmd_poly,      "specify a selection polygon geometry",
+	"[x1,y1 x2,y2 x3,y3 ...]\n\n"
+	"* Select exact image coordinates for a crop region\n"
+	"* Usefule for selecting a consistent area across several images\n"
+	"* Specify three or more coordinates as \033[4mx,y\033[0m separated by spaces" },
+
+{ "quit",      cmd_quit,      "quit",
 	NULL },
 
 { "ratio",     cmd_ratio,     "calculate the ratio(s) of the current crop region",
-	"[ 1 | 2 | relative | gratio ]\n\n"
-	"* Calculate the ratio of \033[3mcount\033[0m to \033[3marea\033[0m for the current crop region\n"
-	"* Ratios are not scaled to percents and will range from 0.0 - 1.0\n"
-	"* Specify threshold \033[3m1\033[0m or \033[1m2\033[0m to get the ratio over the total\n"
-	"* Specify \033[3mrelative\033[0m for the ratio of threshold 1 over 2\n"
-	"* Specify \033[3mgratio\033[0m for the area-based gratio of 1 over 1+2\n" },
+	"[relative | val | val val]\n\n"
+	"* Calculate the ratio of \033[4mcount\033[0m to \033[4marea\033[0m for a region\n"
+	"* Specify region \033[4mval\033[0m select a specific region\n"
+	"* Specify two \033[4val\033[0ms for the ratio of the first over the second\n"
+	"* Specify \033[4mrelative\033[0m for the ratio of each region over the total of all regions\n"
+	"* Ratios are not scaled to percents and will range from 0.00 - 1.00\n" },
 
 { "shell",     cmd_shell,     "display the output of a shell command",
 	"command-string\n\n"
-	"* Executes \033[3mcommand-string\033[0m in the system shell and returns the output\n"
+	"* Executes \033[4mcommand-string\033[0m in the system shell and returns the output\n"
 	"* CAUTION: any commands that expect input from stdin may have unpredictable results" },
 
 { "sink",      cmd_sink,      "sink output to file",
 	"[filename]\n\n"
-	"* Redirects all subsequent output to \033[3mfilename\033[0m\n"
-	"* Output is appended, \033[3mfilename\033[0m will never be overwritten\n"
-	"* In the absence of a parameter, \033[3msink\033[0m will end any previous redirection" },
+	"* Redirects all subsequent output to \033[4mfilename\033[0m\n"
+	"* Output is appended, \033[4mfilename\033[0m will never be overwritten\n"
+	"* In the absence of a parameter, \033[4msink\033[0m will end any previous redirection" },
 
 { "threshold", cmd_threshold, "set/show the current threshold",
-	"[spec] val val [val [val val val]]\n\n"
+	"[val RRGGBB RRGGBB]\n\n"
 	"* Set or show the threshold level(s) for the current image\n"
-	"* With no parameter, \033[3mthreshold\033[0m returns the current setting\n"
-	"* Optional parameter \033[3mspec\033[0m can specify on of the following:\n"
-	"    - Color:    Red, Green, Blue\n"
-	"    - Boundary: Hi, Low\n"
-	"* Provided with a color \033[3mspec\033[0m, threshold will read 2 values: hi and low for the specified color\n"
-	"* Provided with a boundary \033[3mspec\033[0m, threshold will read 3 values: red, green, and blue values for that boundary\n"
-	"* With no \033[mspec\033[0m, threshold requires 6 values: red, green, and blue for low then hi boundaries\n"
-	"* All \033[mval\033[0m's can range from 0-255\n"
-	"* Default = 0 0 0 80 80 80" },
+	"* With no parameter, \033[4mthreshold\033[0m returns the current settings\n"
+	"* Specify region \033[4mval\033[0m to set the range for that region as two RRGGBB hex color codes" },
 
 { "zoom",     cmd_zoom,       "zoom/scale image",
 	"[direction | val]\n\n"
 	"* Set or show the zoom or scaling level for the current image\n"
-	"* With no parameter, \033[3mzoom\033[0m returns the current scaling\n"
+	"* With no parameter, \033[4mzoom\033[0m returns the current scaling\n"
 	"* One parameter can be provided to specify a direction or value\n"
-	"* Directions can be specified as \033[3mup\033[0m, \033[3mdown\033[0m, \033[3min\033[0m, \033[3mout\033[0m\n"
-	"* Values can range from 0.1 to 1.0 and speficy an exact scale" },
+	"* Directions can be specified as \033[4mup\033[0m, \033[4mdown\033[0m, \033[4min\033[0m, \033[4mout\033[0m\n"
+	"* Values can range from 0.10 to 1.00 and speficy an exact scale" },
 
 { NULL, NULL, NULL, NULL },
