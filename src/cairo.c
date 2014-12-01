@@ -40,6 +40,34 @@ int img_threshold_draw(Img *img) {
 	}
 }
 
+int img_stretch(Img *img, Col *low, Col *hi) {
+	cairo_surface_flush(img->source);
+	uint8_t *src, *sx;
+	int i, j, src_stride;
+	int i0 = 0, j0 = 0, iN = img->w, jN = img->h;
+	src_stride = cairo_image_surface_get_stride(img->source);
+	src = cairo_image_surface_get_data(img->source);
+	double scale_r = 255 / (double) (hi->r - low->r);
+	double scale_g = 255 / (double) (hi->g - low->g);
+	double scale_b = 255 / (double) (hi->b - low->b);
+	double val;
+	for (j = j0; j < jN; j++) {
+		for (i = i0; i < iN; i++) {
+			sx = src + j*src_stride + i*4; // 4 bytes per pixel
+			val = (sx[0] - low->b) * scale_b;
+			//val = (sx[0] - low->b);
+			sx[0] = (uint8_t) (val > 255 ? 255 : (val < 0 ? 0 : val));
+			val = (sx[1] - low->g) * scale_g;
+			//val = (sx[1] - low->g);
+			sx[1] = (uint8_t) (val > 255 ? 255 : (val < 0 ? 0 : val));
+			val = (sx[2] - low->r) * scale_r;
+			//val = (sx[2] - low->r);
+			sx[2] = (uint8_t) (val > 255 ? 255 : (val < 0 ? 0 : val));
+		}
+	}
+	cairo_surface_flush(img->source);
+}
+
 static int cairo_helper_image_loader(const char *fname, Img *img) {
 	GdkPixbuf *gpix;
 	GError *gerr = NULL;

@@ -43,7 +43,7 @@ int config_init(int argc, const char **argv) {
 	conf.thresh = calloc(n, sizeof(Threshold));
 	fseek(in, 0L, SEEK_SET);
 	while (fgets(line, 256, in)) {
-		if (line[0] == '#')
+		if (line[0] == '#' || line[0] == '\n')
 			continue;
 		else if (sscanf(line, "levels %hhu\n", &n) == 1)
 			continue;
@@ -62,8 +62,10 @@ int config_init(int argc, const char **argv) {
 				conf.thresh[n-1].pseudo.u = u1;
 			}
 		}
-		else
+		else {
+			line[strlen(line)-1] = '\0';
 			fprintf(stderr, "unrecognized configuration entry \"%s\"\n", line);
+		}
 	}
 	for (n = 1; n < argc; ++n)
 		if (argv[n][0] != '-') image_load(argv[n]);

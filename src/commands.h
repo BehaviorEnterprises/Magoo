@@ -105,6 +105,9 @@
 	"* Output is appended, \033[4mfilename\033[0m will never be overwritten\n"
 	"* In the absence of a parameter, \033[4msink\033[0m will end any previous redirection" },
 
+{ "stretch",   cmd_stretch,   "stretch - documentation needed",
+	NULL },
+
 { "threshold", cmd_threshold, "set/show the current threshold",
 	"[val RRGGBB RRGGBB]\n\n"
 	"* Set or show the threshold level(s) for the current image\n"

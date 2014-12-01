@@ -33,6 +33,7 @@ static int cmd_quit(const char *);
 static int cmd_ratio(const char *);
 static int cmd_shell(const char *);
 static int cmd_sink(const char *);
+static int cmd_stretch(const char *);
 static int cmd_threshold(const char *);
 static int cmd_zoom(const char *);
 
@@ -70,8 +71,13 @@ int command_init() {
 }
 
 int image_load(const char *fname) {
-	char *clean;
+	char *clean, *home = getenv("HOME");
 	if (strncmp(fname, "file://", 7) == 0) clean = strdup(fname + 7);
+	else if (strncmp(fname, "~/", 2) == 0 && home) {
+		clean = malloc(strlen(fname) + strlen(home));
+		strcpy(clean, home);
+		strcat(clean, fname + 1);
+	}
 	else clean = strdup(fname);
 	char *end = clean + strlen(clean) - 1;
 	while (end > clean && isspace(*end)) end--;
@@ -432,6 +438,18 @@ int cmd_sink(const char *arg) {
 		return 0;
 	}
 	out = new;
+}
+
+int cmd_stretch(const char *arg) {
+	GET_FOCUSED_IMG
+	int n;
+	if (!arg || !(n=atoi(arg))) return command("help stretch");
+	Col *low = &conf.thresh[n - 1].low;
+	Col *hi = &conf.thresh[n - 1].hi;
+	img_stretch(focused_img, low, hi);
+	img_threshold_draw(focused_img);
+	img_draw(focused_img);
+	XFlush(dpy);
 }
 
 int cmd_threshold(const char *arg) {

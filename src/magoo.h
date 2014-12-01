@@ -78,6 +78,7 @@ typedef struct Command {
 Img *cairo_image_init(const char *);
 int cairo_image_free();
 int img_draw(Img *);
+int img_stretch(Img *, Col *, Col *);
 
 /* commands.c */
 int command_init();
