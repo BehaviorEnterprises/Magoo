@@ -1,12 +1,12 @@
 
 PROG     =  magoo
-VER      =  0.1
+VER      =  0.2
 DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER}
 DEPS     =  x11 cairo freetype2 gdk-2.0 gdk-pixbuf-2.0
 CFLAGS   += -g $(shell pkg-config --cflags ${DEPS}) ${DEFS}
 LDLIBS   += $(shell pkg-config --libs ${DEPS}) -lm -lreadline
 PREFIX   ?= /usr
-MODULES  =  cairo commands console config magoo xlib
+MODULES  =  cairo commands console config magoo note xlib
 HEADERS  =  magoo.h
 #MANPAGES =
 VPATH    =  src

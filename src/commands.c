@@ -7,6 +7,8 @@
 
 #include "magoo.h"
 
+const char *cmd_names[MAX_COLUMNS] = { "area", "count", "ratio", "note", NULL };
+
 #define GET_FOCUSED_IMG\
 	if (!focused_img) {\
 		fprintf(stderr, "no image focused\n");\
@@ -19,7 +21,7 @@ static int cmd_clear(const char *);
 static int cmd_close(const char *);
 static int cmd_color(const char *);
 static int cmd_count(const char *);
-static int cmd_echo(const char *);
+static int cmd_data(const char *);
 static int cmd_help(const char *);
 static int cmd_info(const char *);
 static int cmd_layer(const char *);
@@ -27,6 +29,7 @@ static int cmd_list(const char *);
 static int cmd_mouse(const char *);
 static int cmd_move(const char *);
 static int cmd_name(const char *);
+static int cmd_note(const char *);
 static int cmd_open(const char *);
 static int cmd_poly(const char *);
 static int cmd_quit(const char *);
@@ -37,12 +40,8 @@ static int cmd_stretch(const char *);
 static int cmd_threshold(const char *);
 static int cmd_zoom(const char *);
 
-//static unsigned char *data_ptr1, *data_ptr2, *dptr;
-//static int data_stride1, data_stride2;
-//static Col *col1_low, *col1_hi, *col2_low, *col2_hi;
-//static Bool check_crop_area;
 static FILE *out = NULL;
-Command _commands[] = {
+static Command _commands[] = {
 #include "commands.h"
 };
 
@@ -55,7 +54,7 @@ int command(const char *s) {
 	if (arg && ! arg[0]) arg = NULL;
 	Command *cmd = commands;
 	for (cmd = commands; cmd->name; cmd++)
-		if (!strncasecmp(s, cmd->name, 3))
+		if (!strncasecmp(s, cmd->name, strlen(cmd->name)))
 			return cmd->func(arg);
 	char *base = strdup(s);
 	arg = strchr(base,' ');
@@ -146,13 +145,36 @@ static long *_calculate(long *total) {
 	return ret;
 }
 
+int dat_printf(const char *name, const char *fmt, ...) {
+	va_list arg;
+	/* print to output or sink */
+	va_start(arg, fmt);
+	vfprintf(out, fmt, arg);
+	va_end(arg);
+	fprintf(out, "\n");
+	/* determine notes column */
+	int i, n = 0;
+	for (i = 0; focused_img->columns[i]; ++i)
+		if (strncasecmp(name, cmd_names[focused_img->columns[i] - 1], strlen(name)) == 0)
+			break;
+	if (!focused_img->columns[i]) return 0;
+	/* print to temp string */
+	char str[256];
+	va_start(arg, fmt);
+	vsnprintf(str, 255, fmt, arg);
+	va_end(arg);
+	/* set string to notes column */
+	note_entry(focused_img, i, str);
+}
+
+
 /****************************\
 |* Command functions
 \****************************/
 
 int cmd_alpha(const char *arg) {
 	GET_FOCUSED_IMG
-	if (!arg) fprintf(out, "%03d\n", focused_img->alpha);
+	if (!arg) dat_printf("alpha", "%03d", focused_img->alpha);
 	else {
 		sscanf(arg, "%hhu", &focused_img->alpha);
 		img_draw(focused_img);
@@ -186,11 +208,13 @@ int cmd_count(const char *arg) {
 	if (!arg) {
 		for (n = 0; n < conf.levels; ++n)
 			fprintf(out, "%d: %ld\n", n + 1, ret[n]);
-		fprintf(out, "Total: %ld\n", total);
+		fprintf(out, "Total: ");
+		dat_printf("count", "%ld", total);
 	}
-	else if (arg[0] == 't') fprintf(out, "%ld\n", total);
-	else if (arg[0] == 'a') fprintf(out, "%ld\n", total);
-	else if ( (n=atoi(arg)) && n && n <= conf.levels ) fprintf(out, "%ld\n", ret[n-1]);
+	else if (arg[0] == 't' || arg[0] == 'a')
+		dat_printf("count", "%ld", total);
+	else if ( (n=atoi(arg)) && n && n <= conf.levels )
+		dat_printf("count", "%ld", ret[n-1]);
 	else command("help count");
 	free(ret);
 	return 0;
@@ -221,9 +245,16 @@ int cmd_color(const char *arg) {
 	return 0;
 }
 
-int cmd_echo(const char *arg) {
-	if (arg) fprintf(out, "%s\n", arg);
-	else fprintf(out, "\n");
+int cmd_data(const char *arg) {
+	GET_FOCUSED_IMG
+	int n;
+	if (!arg) note_write_file(NULL);
+	else if ( (n=atoi(arg)) ) {
+		note_set_current(focused_img, n);
+		img_draw(focused_img);
+		XFlush(dpy);
+	}
+	else command("help data");
 	return 0;
 }
 
@@ -231,14 +262,19 @@ int cmd_help(const char *arg) {
 	Command *cmd = commands;
 	if (!arg) {
 		fprintf(out,
+/* TODO fix these: */
 "\n" VERSION_STRING
 "\n\033[1mIMAGE WINDOW\033[0m\n"
 "  \033[1mMouse Left Button\033[0m\n"
 "    Drag to raise / move an image\n"
 "  \033[1mMouse Right Button\033[0m\n"
-"    Click to add points for a region selection\n"
+"    Poly mode: Add points for a region selection\n"
+"    Draw mode: Draw\n"
+"    Note mode: Create new note mark\n"
 "  \033[1mMouse Middle Button\033[0m\n"
-"    Close a current region selection\n"
+"    Poly mode: Close a current region selection\n"
+"    Draw mode: Toggle visibility of highlight overlay\n"
+"    Note mode: Toggle visibility of note marks\n"
 "\n\033[1mCOMMAND WINDOW\033[0m\n"
 		);
 	}
@@ -326,19 +362,18 @@ int cmd_list(const char *arg) {
 
 int cmd_mouse(const char *arg) {
 	if (!arg) {
-		if (conf.draw.a == MODE_DRAW) fprintf(out, "draw %X %d\n",
-				conf.draw.u, conf.width);
+		if (conf.draw.a == MODE_DRAW) fprintf(out, "draw %X %d\n", conf.draw.u, conf.width);
 		else if (conf.draw.a == MODE_POLY) fprintf(out, "select polygon\n");
+		else if (conf.draw.a == MODE_NOTE) fprintf(out, "select a point for a label\n");
 	}
 	else if (arg[0] == 'd') {
 		sscanf(arg, "%*s %X %d", &conf.draw.u, &conf.width);
 		conf.draw.a = MODE_DRAW;
 		if (!conf.width) conf.width = 2;
 	}
-	else {
-		conf.draw.a = MODE_POLY;
-	}
-	img_draw(focused_img);
+	else if (arg[0] == 'p') conf.draw.a = MODE_POLY;
+	else if (arg[0] == 'n') conf.draw.a = MODE_NOTE;
+	img_draw(focused_img); // TODO: NEEDED?
 	XFlush(dpy);
 }
 
@@ -355,6 +390,12 @@ int cmd_move(const char *arg) {
 int cmd_name(const char *arg) {
 	GET_FOCUSED_IMG
 	fprintf(out,"NAME: %s\n", focused_img->name);
+	return 0;
+}
+
+int cmd_note(const char *arg) {
+	if (arg) dat_printf("note", "%s", arg);
+	else dat_printf("note", "");
 	return 0;
 }
 
@@ -402,9 +443,9 @@ int cmd_ratio(const char *arg) {
 	}
 	else if (sscanf(arg, "%hhu %hhu", &n1, &n2) == 2 &&
 			n1 <= conf.levels && n2 <= conf.levels)
-		fprintf(out, "%Lf\n", ret[n1-1] / (long double) ret[n2-1]);
+		dat_printf("ratio", "%Lf", ret[n1-1] / (long double) ret[n2-1]);
 	else if (sscanf(arg, "%hhu", &n1) == 1 && n1 <= conf.levels)
-		fprintf(out, "%Lf\n", ret[n1-1] / (long double) total);
+		dat_printf("ratio", "%Lf", ret[n1-1] / (long double) total);
 	else
 		command("help ratio");
 	free(ret);
@@ -482,13 +523,13 @@ int cmd_zoom(const char *arg) {
 	else if (arg[0] == 'u' || arg[0] == 'i') scale += 0.1;
 	else if (arg[0] == 'd' || arg[0] == 'o') scale -= 0.1;
 	else scale = atof(arg);
-	if (scale < 0.1) scale = 0.1;
-	else if (scale > 1.0) scale = 1.0;
+	if (scale < 0.05) scale = 0.05;
+	else if (scale > 20.0) scale = 20.0;
+	focused_img->scale = scale;
+	img_resize(focused_img);
 	cairo_identity_matrix(focused_img->ctx);
 	cairo_scale(focused_img->ctx, scale, scale);
 	cairo_set_line_width(focused_img->ctx, 1.25 / scale);
-	focused_img->scale = scale;
-	XResizeWindow(dpy, focused_img->win, focused_img->w * scale, focused_img->h * scale);
 	img_draw(focused_img);
 	XFlush(dpy);
 	return 0;

@@ -19,7 +19,7 @@ int config_init(int argc, const char **argv) {
 	imgs = NULL;
 	FILE *in = NULL;
 	uint8_t n;
-	uint32_t u1, u2;
+	uint32_t u1, u2, u3, u4;
 	char line[256], var[64], *env;
 	conf.draw.a = MODE_POLY;
 	for (n = 1; n < argc - 1; ++n)
@@ -51,6 +51,15 @@ int config_init(int argc, const char **argv) {
 			conf.alpha = n;
 		else if (sscanf(line, "line %X", &u1) == 1)
 			conf.line.u = u1;
+		else if (sscanf(line, "label %X %X %X %X", &u1, &u2, &u3, &u4) == 4) {
+			conf.fgNote.u = u1; conf.bgNote.u = u2;
+			conf.fgCurNote.u = u3; conf.bgCurNote.u = u4;
+		}
+		else if (strncmp(line, "column", 6) == 0) {
+			u2 = 0;
+			for (u1 = 0; cmd_names[u1]; ++u1)
+				if (strstr(line, cmd_names[u1])) conf.columns[u2++] = u1 + 1;
+		}
 		else if (sscanf(line, "range%hhu %X %X", &n, &u1, &u2) == 3) {
 			if (n && n <= conf.levels) {
 				conf.thresh[n-1].low.u = u1;

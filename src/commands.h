@@ -29,10 +29,8 @@
 	"* If \033[4mtotal\033[0m is specified, the area of the current crop region is displayed\n"
 	"* With no parameter, values for each region are displayed" },
 
-{ "echo",      cmd_echo,      "write a string to the output",
-	"[string]\n\n"
-	"* Writes \033[4mstring\033[0m to the current output\n"
-	"* Can be used to place notes in output sink files" },
+{ "data",      cmd_data,      "display the current data file contents",
+	NULL },
 
 { "exit",      cmd_quit,      "exit",
 	NULL },
@@ -55,6 +53,7 @@
 	"[polygon | draw RRGGBB]\n\n"
 	"* Specify \033[4mpolygon\033[0m to select crop regions with the mouse\n"
 	"* Speficy \033[4mdraw\033[0m followed by a hex color code to modify the image\n"
+	"* Speficy \033[4mnote\033[0m to add note marks to the image\n"
 	"* In the absence of a parameter, the current setting is displayed" },
 
 { "move",      cmd_move,      "move image window",
@@ -72,6 +71,11 @@
 	"* If \033[4mstring\033[0m is provided, the current image name will be set\n"
 	"* Setting the image name currently serves no purpose\n"
 	"* The default name is the basename of the file without the extension" },
+
+{ "note",      cmd_note,      "write a string to the output",
+	"[string]\n\n"
+	"* Writes \033[4mstring\033[0m to the current output\n"
+	"* Can be used to place notes in output sink files or data files" },
 
 { "open",      cmd_open,      "open a new image",
 	"[filename]\n\n"

@@ -21,6 +21,19 @@ alpha		255
 ## Color and opacity for the bounding line drawn around selected areas
 line		AAFFDD0E
 
+## label ##
+## TYPE: 32-bit color hex code AARRGGBB
+## Color and opacity foreground + background for normal and current labels
+label		EE000000 D0FFFFFF EE000044 D0FFDD44
+
+## columns ##
+## TYPE: list of values to be logged
+## Command names whose output will be logged to the data file if there
+## is a selected label.
+## Select from the following:
+##   area, count, note, ratio
+columns	ratio, note
+
 ## rangeNN ##
 ## TYPE: 2 24-bit color hex codes RRGGBB (alpha values are ignored)
 ## colorNN ##

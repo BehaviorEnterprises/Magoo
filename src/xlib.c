@@ -192,6 +192,10 @@ void buttonpress(XEvent *ev) {
 			img_draw(img);
 			path_open = False;
 		}
+		else if (conf.draw.a == MODE_NOTE) {
+			img->show_notes = !img->show_notes;
+			img_draw(img);
+		}
 	}
 	else if (e->button == 3) {
 		if (conf.draw.a == MODE_DRAW) {
@@ -226,6 +230,10 @@ img_draw(img);
 			cairo_stroke_preserve(img->ctx);
 			XFlush(dpy);
 			path_open = True;
+		}
+		else if (conf.draw.a == MODE_NOTE) {
+			note_create_label(img, (int) (e->x / img->scale), (int) (e->y / img->scale));
+			img_draw(img);
 		}
 	}
 }

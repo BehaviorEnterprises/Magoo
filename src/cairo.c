@@ -110,17 +110,33 @@ Img *cairo_image_init(const char *fname) {
 	cairo_surface_t *t;
 	t = cairo_xlib_surface_create(dpy, img->win, vis, img->w, img->h);
 	img->ctx = cairo_create(t);
+	img->show_notes = True;
 	cairo_surface_destroy(t);
+	/* get data filename */
+	dot = strrchr(fname, '.');
+	if (dot) *dot = '\0';
+	img->notes_file = malloc((strlen(fname) + 5) * sizeof(char));
+	strcpy(img->notes_file, fname);
+	strcat(img->notes_file, ".csv");
+	/* if no file read, set default columns */
+	if (note_read_file(img)) {
+		for (n = 0; conf.columns[n]; ++n)
+			img->columns[n] = conf.columns[n];
+	}
 	return img;
 }
 
 int cairo_image_free(Img *img) {
-	uint8_t n;
-	for (n = 0; n < conf.levels; ++n)
-		cairo_surface_destroy(img->mask[n]);
+	note_write_file(img);
+	uint8_t i, j;
+	for (i = 0; i < conf.levels; ++i)
+		cairo_surface_destroy(img->mask[i]);
+	free_notes(img);
+	free(img->note);
 	free(img->mask);
 	cairo_destroy(img->ctx);
 	cairo_surface_destroy(img->source);
+	free(img->notes_file);
 	free(img->name);
 	xlib_image_free(img);
 	free(img);
@@ -151,6 +167,46 @@ int img_draw(Img *img) {
 	c = &conf.line;
 	cairo_set_source_rgba(img->ctx, c->r / 255.0, c->g / 255.0, c->b / 255.0, c->a);
 	cairo_stroke_preserve(img->ctx);
+if (img->show_notes) {
+int x, y;
+char str[5];
+cairo_text_extents_t ext;
+	for (n = 0; n < img->nnotes; ++n) {
+x = img->note[n].x;
+y = img->note[n].y;
+snprintf(str,4, "%d", n+1);
+cairo_text_extents(img->ctx, str, &ext);
+cairo_rectangle(img->ctx,
+	x - 4 + ext.x_bearing,
+	y - 4 + ext.y_bearing,
+	ext.width + 8,
+	ext.height + 8);
+		if (n == img->curnote - 1) c = &conf.bgCurNote;
+		else c = &conf.bgNote;
+		cairo_set_source_rgba(img->ctx, c->r / 255.0, c->g / 255.0, c->b / 255.0, c->a / 255.0);
+cairo_fill_preserve(img->ctx);
+		if (n == img->curnote - 1) c = &conf.fgCurNote;
+		else c = &conf.fgNote;
+		cairo_set_source_rgba(img->ctx, c->r / 255.0, c->g / 255.0, c->b / 255.0, c->a / 255.0);
+cairo_stroke(img->ctx);
+		cairo_set_source_rgba(img->ctx, 0, 0, 0.5, 0.9);
+		cairo_move_to(img->ctx, x, y);
+		cairo_show_text(img->ctx, str);
+	}
+}
 	xlib_draw();
 	return 0;
 }
+
+int img_resize(Img *img) {
+	cairo_surface_t *t;
+	int w = img->w * img->scale;
+	int h = img->h * img->scale;
+	XResizeWindow(dpy, img->win, w, h);
+	t = cairo_xlib_surface_create(dpy, img->win, vis, w, h);
+	cairo_destroy(img->ctx);
+	img->ctx = cairo_create(t);
+	cairo_surface_destroy(t);
+	return 0;
+}
+

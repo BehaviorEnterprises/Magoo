@@ -34,12 +34,19 @@ STRING(PROGRAM_NAME) " v" STRING(PROGRAM_VER) "\n" \
 "License GPL3: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>\n" \
 "Written by Jesse McClure\n"
 
-enum { MODE_DRAW = 0, MODE_POLY };
+#define MAX_COLUMNS	8
+
+enum { MODE_DRAW = 0, MODE_POLY, MODE_NOTE };
 
 typedef union {
 	uint32_t u;
 	struct { uint8_t b, g, r, a; };
 } Col;
+
+typedef struct Note {
+	int x, y;
+	char *entry[MAX_COLUMNS];
+} Note;
 
 typedef struct Threshold {
 	Col low, hi, pseudo;
@@ -50,19 +57,22 @@ struct Img {
 	Img *next;
 	Window win;
 	cairo_t *ctx;
-	int x, y, w, h;
-	float scale;
 	cairo_surface_t *source;
-	char *name;
-	uint8_t alpha;
 	cairo_surface_t **mask;
-//	Col cropline;
+	Note *note;
+	Bool show_notes;
+	float scale;
+	int x, y, w, h, nnotes, curnote;
+	char *name, *notes_file;
+	uint8_t columns[MAX_COLUMNS];
+	uint8_t alpha;
 };
 
 typedef struct Conf {
 	Threshold *thresh;
-	Col line, draw;
+	Col line, draw, fgNote, bgNote, fgCurNote, bgCurNote;
 	uint8_t alpha, levels, width;
+	uint8_t columns[MAX_COLUMNS];
 	char *prompt;
 	Bool layers;
 } Conf;
@@ -74,11 +84,15 @@ typedef struct Command {
 	const char *detail;
 } Command;
 
+extern const char *cmd_names[MAX_COLUMNS];
+
+
 /* cairo.c */
 Img *cairo_image_init(const char *);
 int cairo_image_free();
 int img_draw(Img *);
 int img_stretch(Img *, Col *, Col *);
+int img_resize(Img *);
 
 /* commands.c */
 int command_init();

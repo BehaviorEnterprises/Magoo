@@ -11,5 +11,14 @@ will be posted here as development progresses.
 
 * Man page needed
 * Tab completion for parameters (?)
+* Data file with labels
+	- free notes in notes.c (?)
+	- highlight current label
+	- Log to data file: alpha, area, count, echo, ratio
+		- Or better yet, define columns in config file and infer number
+		- Or existing data file header?
 
+##Bugs
+
+* Drag+Drop on image window (sometimes?) fails
 
