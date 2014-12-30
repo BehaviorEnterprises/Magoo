@@ -67,12 +67,13 @@ int note_read_file(Img *img) {
 		note_create_label(img, x, y);
 		char *tok, *sptr, *str, *tokptr;
 		int i = 0;
+		if (entries[0] == ',') ++i;
 		/* tokenize entries */
 		str = strdup(entries);
 		for (tok=strtok_r(str,",",&sptr); tok; tok=strtok_r(NULL,",",&sptr)) {
 			/* clean leading spaces and dup token to entry */
 			for (tokptr = tok; *tokptr == ' '; ++tokptr);
-			note_entry(img, ++i, tokptr);
+			note_entry(img, i++, tokptr);
 			tokptr = NULL;
 		}
 		/* free the tokenization temporary string */
@@ -113,7 +114,7 @@ int note_write_file(Img *img) {
 		for (j = 0; img->columns[j]; ++j) {
 			/* print entry, or blank column in the absence of an entry */
 			if (n->entry[j]) fprintf(out, ", %s", n->entry[j]);
-			else fprintf(out, ",");
+			else fprintf(out, ", ");
 		}
 		/* finish the line */
 		fprintf(out, "\n");
