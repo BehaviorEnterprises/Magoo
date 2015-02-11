@@ -29,10 +29,15 @@
 	"* If \033[4mtotal\033[0m is specified, the area of the current crop region is displayed\n"
 	"* With no parameter, values for each region are displayed" },
 
-{ "data",      cmd_data,      "display the current data file contents",
-	NULL },
+{ "data",      cmd_data,      "",
+	"[num]\n\n"
+	"* Select pin/marker number \033[4mnum\033[0m if specified\n"
+	"* With no parameter, display the current data file contents" },
 
 { "exit",      cmd_quit,      "exit",
+	NULL },
+
+{ "gratio",    cmd_gratio,    "alias for \033[4mratio relative\033[0m",
 	NULL },
 
 { "help",      cmd_help,      "show this help menu or learn about commands",
@@ -50,7 +55,7 @@
 	NULL },
 
 { "mouse",     cmd_mouse,      "set/show the mouse mode",
-	"[polygon | draw RRGGBB]\n\n"
+	"[polygon | note | draw RRGGBB]\n\n"
 	"* Specify \033[4mpolygon\033[0m to select crop regions with the mouse\n"
 	"* Speficy \033[4mdraw\033[0m followed by a hex color code to modify the image\n"
 	"* Speficy \033[4mnote\033[0m to add note marks to the image\n"

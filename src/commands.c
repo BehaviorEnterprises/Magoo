@@ -7,7 +7,7 @@
 
 #include "magoo.h"
 
-const char *cmd_names[MAX_COLUMNS] = { "area", "count", "ratio", "note", NULL };
+const char *cmd_names[MAX_COLUMNS] = { "area", "count", "ratio", "gratio", "note", NULL };
 
 #define GET_FOCUSED_IMG\
 	if (!focused_img) {\
@@ -22,6 +22,7 @@ static int cmd_close(const char *);
 static int cmd_color(const char *);
 static int cmd_count(const char *);
 static int cmd_data(const char *);
+static int cmd_gratio(const char *);
 static int cmd_help(const char *);
 static int cmd_info(const char *);
 static int cmd_layer(const char *);
@@ -258,6 +259,13 @@ int cmd_data(const char *arg) {
 	return 0;
 }
 
+int cmd_gratio(const char *arg) {
+	char ratio_arg[12] = "relative";
+	if (arg) snprintf(ratio_arg, 12, "relative %d", atoi(arg));
+	cmd_ratio(ratio_arg);
+	return 0;
+}
+
 int cmd_help(const char *arg) {
 	Command *cmd = commands;
 	if (!arg) {
@@ -430,13 +438,17 @@ int cmd_poly(const char *arg) {
 int cmd_ratio(const char *arg) {
 	long total;
 	long *ret = _calculate(&total);
-	uint8_t n, n1, n2;
-	Col *c;
+	uint8_t n, n1, n2, n3;
+	//Col *c;
 	if (!arg || arg[0] == 'r') {
+		if (!arg || sscanf(arg, "relative %hhu", &n1) != 1) n1 = 0;
+		if (n1 < 0 || n1 > conf.levels) n1 = 0;
 		long sum = 0;
 		for (n = 0; n < conf.levels; ++n) sum += ret[n];
-		for (n = 0; n < conf.levels; ++n) {
-			c = &conf.thresh[n].pseudo;
+		if (arg && n1)
+			dat_printf("ratio", "%Lf", ret[n1-1] / (long double) sum);
+		else for (n = 0; n < conf.levels; ++n) {
+			//c = &conf.thresh[n].pseudo;
 			if (arg) fprintf(out, "%d: %Lf\n", n + 1, ret[n] / (long double) sum);
 			else fprintf(out, "%d: %Lf\n", n + 1, ret[n] / (long double) total);
 		}

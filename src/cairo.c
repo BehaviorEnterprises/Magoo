@@ -72,7 +72,7 @@ static int cairo_helper_image_loader(const char *fname, Img *img) {
 	GdkPixbuf *gpix;
 	GError *gerr = NULL;
 	if ( !(gpix=gdk_pixbuf_new_from_file(fname, &gerr)) ) {
-		fprintf(stderr,"GDK Pixbuf Error\n");
+		fprintf(stderr,"GDK Pixbuf Error: %s\n", gerr->message);
 		return 1;
 	}
 	gdk_pixbuf_get_file_info(fname, &img->w, &img->h);

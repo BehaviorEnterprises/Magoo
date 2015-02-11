@@ -9,6 +9,7 @@ will be posted here as development progresses.
 
 ##Todo
 
+* Double buffer img_draw
 * Man page needed
 * Tab completion for parameters (?)
 
